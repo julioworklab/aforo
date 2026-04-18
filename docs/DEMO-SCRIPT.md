@@ -36,13 +36,13 @@ Corro: `MONDAY_API_TOKEN=xxx node agent/score.js`
 
 Lee las 2 ventas reales. Le muestro la sugerencia del agente.
 
-> *"El agente sugiere un descuento de 2.15% para la venta de Alan V. — porque es cliente recomendado, financiamiento aprobado, cierre rápido. Eso se traduce en que Trébol recibiría un millón 51 mil pesos HOY en vez de esperar tres semanas."*
+> *"El agente sugiere un descuento de 2.15% para la venta del Audi Q5 — porque es cliente recomendado, financiamiento aprobado con BBVA, cierre rápido. Eso se traduce en que Trébol recibiría un millón 51 mil pesos HOY en vez de esperar tres semanas."*
 
 Cambio al frontend. Conecto wallet del Dealer.
 
 > *"Así se ve para el dueño del negocio."*
 
-- Lleno el formulario: Nombre "Alan Valadez — Audi Q5", Monto 1,080,000, Descuento 3, Plazo 28 días
+- Lleno el formulario: Nombre "Audi Q5", Monto 1,080,000, Institución BBVA, Cliente recurrente ✓, Plazo 28 días
 - Click "Registrar venta por cobrar" → tx → aparece en "Mis ventas registradas"
 
 Cambio a wallet del Lender (disconnect + connect de la otra wallet).

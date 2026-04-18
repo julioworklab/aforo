@@ -86,8 +86,8 @@ Los prestamistas ganan el descuento (2–4% típico). El negocio gana tiempo y l
 ### Cliente beta: **Trébol Motors** (Monterrey)
 
 Conectamos con su sistema real (Monday.com). Encontramos 2 ventas vivas esperando cobro:
-- **Alan V. — $1,080,000 MXN** — aprobado por financiera, esperando desembolso
-- **Jose d. — $530,000 MXN** — en proceso
+- **Audi Q5 — $1,080,000 MXN** — aprobado por financiera, esperando desembolso
+- **Segundo vehículo — $530,000 MXN** — en proceso
 
 **Si usaran Aforo hoy**, recibirían **$1,560,000 MXN** en este instante en vez de esperar 3–4 semanas.
 

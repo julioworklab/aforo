@@ -13,7 +13,7 @@ export default function DealerView() {
   const { address } = useAccount();
 
   // Form state
-  const [dealName, setDealName] = useState('Alan Valadez — Audi Q5');
+  const [dealName, setDealName] = useState('Audi Q5');
   const [faceMXN, setFaceMXN] = useState('1080000');
   const [discount, setDiscount] = useState('3.00');
   const [deadlineDays, setDeadlineDays] = useState('28');
@@ -149,7 +149,7 @@ export default function DealerView() {
         <div className="row" style={{ marginBottom: 12 }}>
           <div style={{ flex: 2 }}>
             <label>Nombre de la venta (interno)</label>
-            <input value={dealName} onChange={e => setDealName(e.target.value)} placeholder="Ej: Alan Valadez — Audi Q5" />
+            <input value={dealName} onChange={e => setDealName(e.target.value)} placeholder="Ej: Audi Q5" />
           </div>
           <div>
             <label>Monto total ($MXN)</label>

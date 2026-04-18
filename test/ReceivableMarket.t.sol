@@ -16,7 +16,7 @@ contract ReceivableMarketTest is Test {
     address treasury = makeAddr("treasury");
 
     // amounts in USDC 6-decimals
-    uint256 constant FACE = 1_080_000 * 1e6;        // 1.08M mUSDC (Alan Valadez deal)
+    uint256 constant FACE = 1_080_000 * 1e6;        // 1.08M mUSDC (Audi Q5 deal)
     uint256 constant DISCOUNT_BPS = 300;            // 3% discount to lenders
     uint256 constant PROTOCOL_FEE_BPS = 50;         // 0.5% protocol fee
 
@@ -39,7 +39,7 @@ contract ReceivableMarketTest is Test {
             DISCOUNT_BPS,
             PROTOCOL_FEE_BPS,
             block.timestamp + 30 days,
-            keccak256("MONDAY_PULSE_ALAN_VALADEZ_2026_03_24")
+            keccak256("MONDAY_PULSE_AUDI_Q5_2026_03_24")
         );
         assertEq(id, 1);
 
