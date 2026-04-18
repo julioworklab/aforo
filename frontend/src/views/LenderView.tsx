@@ -63,9 +63,12 @@ export default function LenderView() {
     query: { refetchInterval: 5000, enabled: Boolean(address) },
   });
 
-  // Pull creation timestamps from event logs so we can compute accurate term/APY.
+  // Pull per-position event timestamps (create, fund, claim) so we can compute
+  // the REAL capital-deployed window for APY, not a theoretical term.
   const publicClient = usePublicClient();
   const [creationTs, setCreationTs] = useState<Record<string, bigint>>({});
+  const [lenderTimings, setLenderTimings] = useState<Record<string, { fund?: bigint; claim?: bigint }>>({});
+
   useEffect(() => {
     if (!publicClient || total === 0) return;
     let cancelled = false;
@@ -73,40 +76,92 @@ export default function LenderView() {
       try {
         const currentBlock = await publicClient.getBlockNumber();
         const fromBlock = currentBlock > 250000n ? currentBlock - 250000n : 0n;
-        const logs = await publicClient.getContractEvents({
-          address: CONTRACTS.ReceivableMarket,
-          abi: rmAbi as any,
-          eventName: 'ReceivableListed',
-          fromBlock,
-          toBlock: currentBlock,
-        });
-        const blockNumbers = Array.from(new Set(logs.map(l => l.blockNumber).filter(Boolean) as bigint[]));
+        const [createdLogs, fundedLogs, claimedLogs] = await Promise.all([
+          publicClient.getContractEvents({
+            address: CONTRACTS.ReceivableMarket,
+            abi: rmAbi as any,
+            eventName: 'ReceivableListed',
+            fromBlock, toBlock: currentBlock,
+          }),
+          publicClient.getContractEvents({
+            address: CONTRACTS.ReceivableMarket,
+            abi: rmAbi as any,
+            eventName: 'LenderFunded',
+            args: address ? { lender: address } : undefined,
+            fromBlock, toBlock: currentBlock,
+          }),
+          publicClient.getContractEvents({
+            address: CONTRACTS.ReceivableMarket,
+            abi: rmAbi as any,
+            eventName: 'LenderClaimed',
+            args: address ? { lender: address } : undefined,
+            fromBlock, toBlock: currentBlock,
+          }),
+        ]);
+
+        const allBlocks = new Set<bigint>();
+        for (const l of [...createdLogs, ...fundedLogs, ...claimedLogs]) {
+          if (l.blockNumber) allBlocks.add(l.blockNumber);
+        }
         const tsByBlock: Record<string, bigint> = {};
-        await Promise.all(blockNumbers.map(async bn => {
+        await Promise.all(Array.from(allBlocks).map(async bn => {
           const block = await publicClient.getBlock({ blockNumber: bn });
           tsByBlock[String(bn)] = block.timestamp;
         }));
-        const result: Record<string, bigint> = {};
-        for (const log of logs as any[]) {
+
+        const created: Record<string, bigint> = {};
+        for (const log of createdLogs as any[]) {
           const rid = log.args?.id?.toString();
-          if (rid && log.blockNumber) result[rid] = tsByBlock[String(log.blockNumber)] ?? 0n;
+          if (rid && log.blockNumber) created[rid] = tsByBlock[String(log.blockNumber)] ?? 0n;
         }
-        if (!cancelled) setCreationTs(result);
+
+        const timings: Record<string, { fund?: bigint; claim?: bigint }> = {};
+        for (const log of fundedLogs as any[]) {
+          const rid = log.args?.id?.toString();
+          if (!rid || !log.blockNumber) continue;
+          const ts = tsByBlock[String(log.blockNumber)];
+          if (!timings[rid]) timings[rid] = {};
+          if (!timings[rid].fund || ts < timings[rid].fund!) timings[rid].fund = ts;
+        }
+        for (const log of claimedLogs as any[]) {
+          const rid = log.args?.id?.toString();
+          if (!rid || !log.blockNumber) continue;
+          const ts = tsByBlock[String(log.blockNumber)];
+          if (!timings[rid]) timings[rid] = {};
+          timings[rid].claim = ts;
+        }
+
+        if (!cancelled) {
+          setCreationTs(created);
+          setLenderTimings(timings);
+        }
       } catch (e) {
-        console.warn('No se pudieron cargar timestamps de creación:', e);
+        console.warn('No se pudieron cargar timestamps:', e);
       }
     })();
     return () => { cancelled = true; };
-  }, [publicClient, total]);
+  }, [publicClient, total, address]);
 
-  function termDaysFor(id: bigint, deadline: bigint): number {
-    const created = creationTs[String(id)];
-    if (created && deadline > created) {
-      return Number(deadline - created) / 86400;
+  /** Days of real capital deployment.
+   *  - Realized (claimed): fund → claim (actual held window).
+   *  - Active (funded but not yet claimed): fund → deadline (expected).
+   *  - Fallback to creation→deadline if fund event missing.
+   *  Floor at 1 day so the display doesn't go into hours/minutes. */
+  function termDaysFor(id: bigint, deadline: bigint, opts: { claimed?: boolean } = {}): number {
+    const rid = String(id);
+    const t = lenderTimings[rid];
+    if (opts.claimed && t?.fund && t?.claim && t.claim > t.fund) {
+      return Math.max(1, Number(t.claim - t.fund) / 86400);
     }
-    // Fallback: remaining days to deadline (conservative)
+    if (t?.fund && deadline > t.fund) {
+      return Math.max(1, Number(deadline - t.fund) / 86400);
+    }
+    const created = creationTs[rid];
+    if (created && deadline > created) {
+      return Math.max(1, Number(deadline - created) / 86400);
+    }
     const nowSec = BigInt(Math.floor(Date.now() / 1000));
-    if (deadline > nowSec) return Number(deadline - nowSec) / 86400;
+    if (deadline > nowSec) return Math.max(1, Number(deadline - nowSec) / 86400);
     return 28;
   }
 
@@ -355,7 +410,7 @@ export default function LenderView() {
               : data.status === 6 ? share : 0n;
             const profit = actualPayout - share;
             const effectiveReturn = share > 0n ? Number(profit) / Number(share) : 0;
-            const term = termDaysFor(id, data.settlementDeadline);
+            const term = termDaysFor(id, data.settlementDeadline, { claimed: true });
             const apy = annualizePct(effectiveReturn, term);
 
             return (
