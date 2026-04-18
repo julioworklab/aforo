@@ -76,8 +76,24 @@ aforo/
 ├── test/                   # Tests
 ├── agent/                  # Scoring agent (Node)
 ├── frontend/               # Next.js app (Dealer + Lender views)
-└── docs/                   # Pitch, demo script, technical notes
+└── docs/
+    ├── PITCH.md            # Pitch 3-min estructura + slides
+    ├── DEMO-SCRIPT.md      # Guión cronometrado de la demo
+    └── QA.md               # Preguntas duras y respuestas (modelo · riesgo · tech · regulatorio · escalamiento)
 ```
+
+---
+
+## ¿Preguntas?
+
+Lee **[docs/QA.md](docs/QA.md)** — respuestas directas a las preguntas del abogado del diablo:
+
+- ¿Cómo blindan a los lenders que el dealer no invente una venta?
+- ¿Esto no es DeFi?
+- ¿Por qué Monad y no un L2?
+- ¿Es asesoría financiera? ¿Necesitan licencia?
+- ¿Cómo decide el descuento el agente?
+- ¿En qué se diferencian de Konfío / Creze / Centrifuge?
 
 ---
 

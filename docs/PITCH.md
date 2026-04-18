@@ -121,20 +121,28 @@ Conectamos con su sistema real (Monday.com). Encontramos 2 ventas vivas esperand
 
 ## Guía para preguntas hostiles (Q&A)
 
+**Cheat sheet rápida para Q&A en vivo.** Para respuestas completas y más preguntas, ver [`docs/QA.md`](./QA.md).
+
+**¿Cómo blindan a los lenders que el dealer no invente una venta?**
+El sistema **precia el riesgo** — dealer sin colateral + sin historial + sin docs = descuento 12-15% (similar a factoring tradicional); con los 3 blindajes = 1.5-2%. En producción: verificación al origen (CRM + atestación bancaria), skin in the game (stake del dealer), capa legal (contrato + seguro mutualista + KYB). Ver QA.md sección 2.
+
+**¿Esto no es DeFi?**
+Usa infra DeFi pero es **RWA private credit** — categoría existente (Centrifuge, Goldfinch, Maple). Dealers KYB'd, colateral parcial, conexión al mundo real. Diferencia: LATAM-first, vertical autos/PyME, integración con CRM del dealer.
+
 **¿Esto no es asesoría financiera? ¿Necesitan licencia?**
-No. Esto es factoraje B2B — figura ya regulada en México como SOFOM ENR o Institución de Financiamiento Colectivo bajo la Ley Fintech 2018. Existe marco legal, no lo estamos inventando.
+No. Es **factoraje B2B** — figura regulada en México vía SOFOM ENR o IFC bajo Ley Fintech 2018. El certificado de factoraje es título de crédito ejecutivo (LGTOC).
 
 **¿Qué pasa si el banco nunca paga?**
-El contrato marca la operación en default después del plazo. El negocio tiene responsabilidad legal off-chain de regresar a los prestamistas. En el MVP los prestamistas absorben el riesgo — en Fase 2 integramos un pool de garantía + seguro privado.
+El contrato marca default. Responsabilidad legal off-chain del dealer (contrato de factoraje firmado). Fase 2: slashing del stake + pool de seguro mutualista.
 
 **¿Cómo sé que el negocio realmente vendió?**
-En el MVP lo validamos leyendo su sistema de ventas (Monday.com en el caso de Trébol, o cualquier DMS/ERP equivalente). En Fase 2 se agrega firma de la financiera como oráculo.
+MVP: validamos contra el CRM del dealer (Monday en Trébol, DMS equivalente en otros). Fase 2: firma on-chain de la financiera como oráculo.
 
-**¿Cómo es diferente de Konfío o Creze?**
-Ellos arrancan arriba de $100,000 MXN por ticket por unit economics. Nosotros atendemos sub-$100K — el 70% del mercado que ellos no pueden servir.
+**¿Cómo es diferente de Konfío / Creze?**
+Ellos arrancan arriba de $100K MXN/ticket por unit economics. Nosotros atendemos sub-$100K — el 70% del mercado que ellos no pueden servir rentablemente.
 
 **¿Por qué no en Ethereum / Base / Arbitrum?**
-Funciona, pero a escala no. Con 20 lotes generando 300+ receivables/mes cada uno con pagos, liquidaciones y rebalanceos — en EVM secuencial ves contention, MEV, UX degrada. Parallel EVM de Monad lo aguanta. Además, gas bajo es el que habilita tickets de $5K.
+Gas floor + composability con DeFi nativo + parallel EVM sin contention al escalar. No "TPS bruto" — nuestro volumen no lo necesita todavía. Ver QA.md sección 3.
 
 **¿Cuándo mainnet?**
-3 meses. Necesitamos cerrar estructura legal (SOFOM ENR establecida o partner con una existente), pool inicial de prestamistas, y 2 dealers más además de Trébol.
+3 meses. Pre-requisitos: estructura legal cerrada + pool inicial ($500K-2M MXN) + 2-3 dealers adicionales + auditoría de contratos.
