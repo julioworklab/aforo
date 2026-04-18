@@ -34,26 +34,7 @@ export default function App() {
               <button className="ghost" onClick={() => disconnect()}>Salir</button>
             </div>
           ) : (
-            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', justifyContent: 'flex-end', maxWidth: 600 }}>
-              {connectors
-                .filter((c) => !/trust/i.test(c.name) && !/trust/i.test(c.id))
-                .map((c) => (
-                  <button
-                    key={c.uid}
-                    onClick={() => connect({ connector: c })}
-                    title={`${c.id} — ${c.type}`}
-                  >
-                    {c.icon && (
-                      <img
-                        src={c.icon}
-                        alt=""
-                        style={{ width: 16, height: 16, verticalAlign: 'middle', marginRight: 6, borderRadius: 3 }}
-                      />
-                    )}
-                    {c.name}
-                  </button>
-                ))}
-            </div>
+            <WalletPicker connectors={connectors} onConnect={(c) => connect({ connector: c })} />
           )}
         </div>
       </header>
@@ -120,6 +101,117 @@ export default function App() {
           </a>
         </div>
       </footer>
+    </div>
+  );
+}
+
+// Wallet picker: on desktop shows injected providers discovered via EIP-6963.
+// On mobile (no extensions) shows deep-link buttons that open the site inside
+// each wallet's in-app browser, where window.ethereum IS injected.
+function WalletPicker({
+  connectors,
+  onConnect,
+}: {
+  connectors: ReturnType<typeof useConnect>['connectors'];
+  onConnect: (c: ReturnType<typeof useConnect>['connectors'][number]) => void;
+}) {
+  const filtered = connectors.filter((c) => !/trust/i.test(c.name) && !/trust/i.test(c.id));
+
+  const isMobile = typeof navigator !== 'undefined' &&
+    /Android|iPhone|iPad|iPod|Opera Mini|IEMobile/i.test(navigator.userAgent);
+
+  const currentHost = typeof window !== 'undefined' ? window.location.host : '';
+  const currentPath = typeof window !== 'undefined' ? window.location.pathname : '/';
+  const currentOrigin = typeof window !== 'undefined' ? window.location.origin : '';
+  const currentFullUrl = typeof window !== 'undefined' ? window.location.href : '';
+
+  const deepLinks = [
+    {
+      name: 'MetaMask',
+      href: `https://metamask.app.link/dapp/${currentHost}${currentPath}`,
+      bg: 'linear-gradient(135deg, #f6851b, #e2761b)',
+    },
+    {
+      name: 'Phantom',
+      href: `https://phantom.app/ul/browse/${encodeURIComponent(currentFullUrl)}?ref=${encodeURIComponent(currentOrigin)}`,
+      bg: 'linear-gradient(135deg, #ab9ff2, #4a3cc5)',
+    },
+    {
+      name: 'Rainbow',
+      href: `https://rnbwapp.com/browse?url=${encodeURIComponent(currentFullUrl)}`,
+      bg: 'linear-gradient(135deg, #ff7a59, #ffb13b, #4ac1ff, #9b4bff)',
+    },
+  ];
+
+  // On mobile, if no injected provider, show deep-link row.
+  if (isMobile && filtered.length === 0) {
+    return (
+      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', justifyContent: 'flex-end', maxWidth: 600 }}>
+        {deepLinks.map((w) => (
+          <a
+            key={w.name}
+            href={w.href}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{
+              background: w.bg,
+              color: 'white',
+              padding: '10px 14px',
+              borderRadius: 8,
+              fontWeight: 600,
+              fontSize: 13,
+              textDecoration: 'none',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 6,
+            }}
+          >
+            📱 {w.name}
+          </a>
+        ))}
+      </div>
+    );
+  }
+
+  // Desktop or wallet-browser: inject provider buttons. If no providers at all
+  // on desktop, still fall back to the deep-link row so the user has options.
+  return (
+    <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', justifyContent: 'flex-end', maxWidth: 600 }}>
+      {filtered.map((c) => (
+        <button
+          key={c.uid}
+          onClick={() => onConnect(c)}
+          title={`${c.id} — ${c.type}`}
+        >
+          {c.icon && (
+            <img
+              src={c.icon}
+              alt=""
+              style={{ width: 16, height: 16, verticalAlign: 'middle', marginRight: 6, borderRadius: 3 }}
+            />
+          )}
+          {c.name}
+        </button>
+      ))}
+      {filtered.length === 0 && deepLinks.map((w) => (
+        <a
+          key={w.name}
+          href={w.href}
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{
+            background: w.bg,
+            color: 'white',
+            padding: '10px 14px',
+            borderRadius: 8,
+            fontWeight: 600,
+            fontSize: 13,
+            textDecoration: 'none',
+          }}
+        >
+          📱 {w.name}
+        </a>
+      ))}
     </div>
   );
 }
