@@ -85,6 +85,36 @@ export function annualizePct(periodReturn: number, termDays: number): number {
   return ((1 + periodReturn) ** (365 / termDays) - 1) * 100;
 }
 
+// --- Local timing stamps (hackathon workaround: Monad testnet RPC limits
+// eth_getLogs to 100 blocks, so we can't easily pull historical events.
+// We persist the tx time in localStorage the moment the user kicks it off.) ---
+
+const TIMINGS_KEY = 'aforo:timings:v1';
+
+type TimingStore = Record<string, number>; // unix seconds
+
+function readStore(): TimingStore {
+  if (typeof localStorage === 'undefined') return {};
+  try { return JSON.parse(localStorage.getItem(TIMINGS_KEY) ?? '{}'); }
+  catch { return {}; }
+}
+
+function writeStore(s: TimingStore) {
+  if (typeof localStorage === 'undefined') return;
+  localStorage.setItem(TIMINGS_KEY, JSON.stringify(s));
+}
+
+export function stampTiming(action: 'fund' | 'claim', id: bigint, address: string) {
+  const s = readStore();
+  s[`${action}:${String(id)}:${address.toLowerCase()}`] = Math.floor(Date.now() / 1000);
+  writeStore(s);
+}
+
+export function readTiming(action: 'fund' | 'claim', id: bigint, address: string): number | null {
+  const s = readStore();
+  return s[`${action}:${String(id)}:${address.toLowerCase()}`] ?? null;
+}
+
 // ===== Agente Aforo — scoring engine en el navegador ========================
 
 export type Institution =

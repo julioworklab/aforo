@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react';
-import { useAccount, useReadContract, useWriteContract, useWaitForTransactionReceipt, useReadContracts, usePublicClient } from 'wagmi';
+import { useAccount, useReadContract, useWriteContract, useWaitForTransactionReceipt, useReadContracts } from 'wagmi';
 import { CONTRACTS } from '../config';
 import rmAbi from '../receivable-market-abi.json';
 import usdcAbi from '../mock-usdc-abi.json';
 import {
   formatMXN, parseMXN, statusPillClass, statusLabel,
-  formatDeadline, annualizePct, type Receivable,
+  formatDeadline, annualizePct, stampTiming, readTiming, type Receivable,
 } from '../lib';
 
 export default function LenderView() {
@@ -63,103 +63,22 @@ export default function LenderView() {
     query: { refetchInterval: 5000, enabled: Boolean(address) },
   });
 
-  // Pull per-position event timestamps (create, fund, claim) so we can compute
-  // the REAL capital-deployed window for APY, not a theoretical term.
-  const publicClient = usePublicClient();
-  const [creationTs, setCreationTs] = useState<Record<string, bigint>>({});
-  const [lenderTimings, setLenderTimings] = useState<Record<string, { fund?: bigint; claim?: bigint }>>({});
-
-  useEffect(() => {
-    if (!publicClient || total === 0) return;
-    let cancelled = false;
-    (async () => {
-      try {
-        const currentBlock = await publicClient.getBlockNumber();
-        const fromBlock = currentBlock > 250000n ? currentBlock - 250000n : 0n;
-        const [createdLogs, fundedLogs, claimedLogs] = await Promise.all([
-          publicClient.getContractEvents({
-            address: CONTRACTS.ReceivableMarket,
-            abi: rmAbi as any,
-            eventName: 'ReceivableListed',
-            fromBlock, toBlock: currentBlock,
-          }),
-          publicClient.getContractEvents({
-            address: CONTRACTS.ReceivableMarket,
-            abi: rmAbi as any,
-            eventName: 'LenderFunded',
-            args: address ? { lender: address } : undefined,
-            fromBlock, toBlock: currentBlock,
-          }),
-          publicClient.getContractEvents({
-            address: CONTRACTS.ReceivableMarket,
-            abi: rmAbi as any,
-            eventName: 'LenderClaimed',
-            args: address ? { lender: address } : undefined,
-            fromBlock, toBlock: currentBlock,
-          }),
-        ]);
-
-        const allBlocks = new Set<bigint>();
-        for (const l of [...createdLogs, ...fundedLogs, ...claimedLogs]) {
-          if (l.blockNumber) allBlocks.add(l.blockNumber);
-        }
-        const tsByBlock: Record<string, bigint> = {};
-        await Promise.all(Array.from(allBlocks).map(async bn => {
-          const block = await publicClient.getBlock({ blockNumber: bn });
-          tsByBlock[String(bn)] = block.timestamp;
-        }));
-
-        const created: Record<string, bigint> = {};
-        for (const log of createdLogs as any[]) {
-          const rid = log.args?.id?.toString();
-          if (rid && log.blockNumber) created[rid] = tsByBlock[String(log.blockNumber)] ?? 0n;
-        }
-
-        const timings: Record<string, { fund?: bigint; claim?: bigint }> = {};
-        for (const log of fundedLogs as any[]) {
-          const rid = log.args?.id?.toString();
-          if (!rid || !log.blockNumber) continue;
-          const ts = tsByBlock[String(log.blockNumber)];
-          if (!timings[rid]) timings[rid] = {};
-          if (!timings[rid].fund || ts < timings[rid].fund!) timings[rid].fund = ts;
-        }
-        for (const log of claimedLogs as any[]) {
-          const rid = log.args?.id?.toString();
-          if (!rid || !log.blockNumber) continue;
-          const ts = tsByBlock[String(log.blockNumber)];
-          if (!timings[rid]) timings[rid] = {};
-          timings[rid].claim = ts;
-        }
-
-        if (!cancelled) {
-          setCreationTs(created);
-          setLenderTimings(timings);
-        }
-      } catch (e) {
-        console.warn('No se pudieron cargar timestamps:', e);
-      }
-    })();
-    return () => { cancelled = true; };
-  }, [publicClient, total, address]);
-
-  /** Days of real capital deployment.
-   *  - Realized (claimed): fund → claim (actual held window).
-   *  - Active (funded but not yet claimed): fund → deadline (expected).
-   *  - Fallback to creation→deadline if fund event missing.
-   *  Floor at 1 day so the display doesn't go into hours/minutes. */
+  /** Days of real capital deployment, read from localStorage timings
+   *  stamped at tx time. Floor at 1 day. */
   function termDaysFor(id: bigint, deadline: bigint, opts: { claimed?: boolean } = {}): number {
-    const rid = String(id);
-    const t = lenderTimings[rid];
-    if (opts.claimed && t?.fund && t?.claim && t.claim > t.fund) {
-      return Math.max(1, Number(t.claim - t.fund) / 86400);
+    if (!address) return 28;
+    const fundTs = readTiming('fund', id, address);
+    const claimTs = readTiming('claim', id, address);
+
+    if (opts.claimed && fundTs && claimTs && claimTs > fundTs) {
+      return Math.max(1, (claimTs - fundTs) / 86400);
     }
-    if (t?.fund && deadline > t.fund) {
-      return Math.max(1, Number(deadline - t.fund) / 86400);
+    if (fundTs) {
+      const nowSec = Math.floor(Date.now() / 1000);
+      const ref = opts.claimed ? nowSec : Number(deadline);
+      return Math.max(1, (ref - fundTs) / 86400);
     }
-    const created = creationTs[rid];
-    if (created && deadline > created) {
-      return Math.max(1, Number(deadline - created) / 86400);
-    }
+    // No local stamp — fall back to remaining time to deadline.
     const nowSec = BigInt(Math.floor(Date.now() / 1000));
     if (deadline > nowSec) return Math.max(1, Number(deadline - nowSec) / 86400);
     return 28;
@@ -229,6 +148,7 @@ export default function LenderView() {
         args: [id, amount],
       });
       setLastTxHash(fundHash);
+      if (address) stampTiming('fund', id, address);
     }, 3000);
   }
 
@@ -240,6 +160,7 @@ export default function LenderView() {
       args: [id],
     });
     setLastTxHash(hash);
+    if (address) stampTiming('claim', id, address);
   }
 
   async function mintTestUSDC() {
