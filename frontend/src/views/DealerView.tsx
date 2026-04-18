@@ -165,7 +165,7 @@ export default function DealerView() {
       </div>
       {myReceivables.length === 0 ? (
         <div className="card" style={{ textAlign: 'center', color: '#666' }}>
-          Aún no has registrado ventas por cobrar. Abre el recuadro de abajo para registrar una.
+          Aún no has registrado ventas por cobrar. Abre el recuadro de arriba para registrar una.
         </div>
       ) : (
         myReceivables.map(({ id, data }) => {
@@ -254,9 +254,7 @@ export default function DealerView() {
 
   return (
     <div>
-      {salesList}
-
-      <div className="card" style={{ marginTop: 20, padding: 0, overflow: 'hidden' }}>
+      <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
         <button
           onClick={() => setFormOpen(o => !o)}
           style={{
@@ -484,6 +482,8 @@ export default function DealerView() {
           </div>
         )}
       </div>
+
+      <div style={{ marginTop: 20 }}>{salesList}</div>
 
       {txConfirming && <div style={{ marginTop: 10, fontSize: 13, color: '#ffcc5c' }}>Confirmando transacción…</div>}
     </div>
