@@ -35,22 +35,24 @@ export default function App() {
             </div>
           ) : (
             <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', justifyContent: 'flex-end', maxWidth: 600 }}>
-              {connectors.map((c) => (
-                <button
-                  key={c.uid}
-                  onClick={() => connect({ connector: c })}
-                  title={`${c.id} — ${c.type}`}
-                >
-                  {c.icon && (
-                    <img
-                      src={c.icon}
-                      alt=""
-                      style={{ width: 16, height: 16, verticalAlign: 'middle', marginRight: 6, borderRadius: 3 }}
-                    />
-                  )}
-                  {c.name}
-                </button>
-              ))}
+              {connectors
+                .filter((c) => !/trust/i.test(c.name) && !/trust/i.test(c.id))
+                .map((c) => (
+                  <button
+                    key={c.uid}
+                    onClick={() => connect({ connector: c })}
+                    title={`${c.id} — ${c.type}`}
+                  >
+                    {c.icon && (
+                      <img
+                        src={c.icon}
+                        alt=""
+                        style={{ width: 16, height: 16, verticalAlign: 'middle', marginRight: 6, borderRadius: 3 }}
+                      />
+                    )}
+                    {c.name}
+                  </button>
+                ))}
             </div>
           )}
         </div>
