@@ -7,6 +7,8 @@ import {
   formatMXN, parseMXN, statusPillClass, statusLabel,
   offchainRef, daysFromNow, formatDeadline, type Receivable,
   scoreDiscount, INSTITUTIONS, type Institution,
+  STAKING_LEVELS, REPUTATION_LEVELS,
+  type StakingLevel, type ReputationLevel, type DocumentsUploaded,
 } from '../lib';
 
 export default function DealerView() {
@@ -21,12 +23,23 @@ export default function DealerView() {
   const [knownClient, setKnownClient] = useState(true);
   const [userOverrodeDiscount, setUserOverrodeDiscount] = useState(false);
 
+  // Risk profile state (the blindajes)
+  const [staking, setStaking] = useState<StakingLevel>('none');
+  const [reputation, setReputation] = useState<ReputationLevel>('new');
+  const [documents, setDocuments] = useState<DocumentsUploaded>({
+    factura: false,
+    contrato: false,
+    cartaBanco: false,
+  });
+
   // Agent scoring — re-runs as form changes
   const scoring = useMemo(() => {
     const amount = parseFloat(faceMXN.replace(/[,\s$]/g, '')) || 0;
     const termDays = parseInt(deadlineDays) || 28;
-    return scoreDiscount({ amount, termDays, institution, knownClient });
-  }, [faceMXN, deadlineDays, institution, knownClient]);
+    return scoreDiscount({
+      amount, termDays, institution, knownClient, staking, reputation, documents,
+    });
+  }, [faceMXN, deadlineDays, institution, knownClient, staking, reputation, documents]);
 
   // Keep the discount field in sync with the agent unless user manually overrode it.
   useEffect(() => {
@@ -181,6 +194,76 @@ export default function DealerView() {
               />
               Cliente recurrente
             </label>
+          </div>
+        </div>
+
+        {/* Perfil del negocio — blindajes estructurales que bajan el descuento */}
+        <div style={{ background: '#0c0c12', border: '1px solid #1f1f2e', padding: 14, borderRadius: 10, marginBottom: 12 }}>
+          <div className="section-title" style={{ marginTop: 0, marginBottom: 10 }}>
+            🛡️ Perfil del negocio · blindajes que bajan el descuento
+          </div>
+          <p style={{ color: '#888', fontSize: 12, marginTop: 0, marginBottom: 12 }}>
+            Mientras más blindajes tengas, menos riesgo absorben los prestamistas, y más barato te sale pedir el adelanto.
+          </p>
+
+          <div className="row" style={{ marginBottom: 10 }}>
+            <div style={{ flex: 1 }}>
+              <label>Colateral stakeado</label>
+              <select value={staking} onChange={e => setStaking(e.target.value as StakingLevel)}>
+                {STAKING_LEVELS.map(s => (
+                  <option key={s.value} value={s.value}>
+                    {s.label} {s.delta >= 0 ? `(+${s.delta} bps)` : `(${s.delta} bps)`}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div style={{ flex: 1 }}>
+              <label>Historial en Aforo</label>
+              <select value={reputation} onChange={e => setReputation(e.target.value as ReputationLevel)}>
+                {REPUTATION_LEVELS.map(r => (
+                  <option key={r.value} value={r.value}>
+                    {r.label} {r.delta >= 0 ? `(+${r.delta} bps)` : `(${r.delta} bps)`}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <label style={{ marginBottom: 8 }}>Documentos subidos (cada uno baja el descuento)</label>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              {[
+                { key: 'factura' as const, label: '📄 Factura de venta' },
+                { key: 'contrato' as const, label: '📑 Contrato de compraventa' },
+                { key: 'cartaBanco' as const, label: '🏦 Carta de aprobación del banco' },
+              ].map(doc => {
+                const on = documents[doc.key];
+                return (
+                  <label
+                    key={doc.key}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer',
+                      textTransform: 'none', letterSpacing: 0, fontSize: 12,
+                      color: on ? 'white' : '#aaa',
+                      padding: '8px 12px',
+                      border: `1px solid ${on ? '#86ffc6' : '#2a2a3a'}`,
+                      borderRadius: 8,
+                      background: on ? 'rgba(134, 255, 198, 0.08)' : '#13131a',
+                      marginBottom: 0,
+                      flex: '1 1 auto',
+                    }}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={on}
+                      onChange={e => setDocuments({ ...documents, [doc.key]: e.target.checked })}
+                      style={{ width: 'auto' }}
+                    />
+                    {doc.label}
+                  </label>
+                );
+              })}
+            </div>
           </div>
         </div>
 

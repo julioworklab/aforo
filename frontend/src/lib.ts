@@ -138,11 +138,32 @@ export const INSTITUTIONS: { value: Institution; label: string; riskBps: number 
   { value: 'credito_directo', label: 'Crédito directo al cliente (sin banco)', riskBps: 80 },
 ];
 
+export type StakingLevel = 'none' | 'low' | 'medium' | 'high';
+export type ReputationLevel = 'new' | 'emerging' | 'established' | 'veteran';
+export type DocumentsUploaded = { factura: boolean; contrato: boolean; cartaBanco: boolean };
+
+export const STAKING_LEVELS: { value: StakingLevel; label: string; delta: number }[] = [
+  { value: 'none',   label: 'Sin colateral', delta: +300 },
+  { value: 'low',    label: '5% del monto stakeado', delta: +50 },
+  { value: 'medium', label: '10% del monto stakeado', delta: -30 },
+  { value: 'high',   label: '20%+ del monto stakeado', delta: -70 },
+];
+
+export const REPUTATION_LEVELS: { value: ReputationLevel; label: string; delta: number }[] = [
+  { value: 'new',        label: 'Primera operación (sin historial)', delta: +250 },
+  { value: 'emerging',   label: '1–10 operaciones cerradas', delta: +50 },
+  { value: 'established',label: '10–50 operaciones cerradas', delta: -30 },
+  { value: 'veteran',    label: '50+ operaciones cerradas', delta: -70 },
+];
+
 export type ScoringInputs = {
   amount: number;       // MXN
   termDays: number;
   institution: Institution;
   knownClient: boolean;
+  staking: StakingLevel;
+  reputation: ReputationLevel;
+  documents: DocumentsUploaded;
 };
 
 export type ScoringOutput = {
@@ -153,33 +174,60 @@ export type ScoringOutput = {
   ourCatAnnualized: string;
 };
 
-export function scoreDiscount({ amount, termDays, institution, knownClient }: ScoringInputs): ScoringOutput {
-  let bps = 300; // base 3.00%
+export function scoreDiscount({
+  amount, termDays, institution, knownClient, staking, reputation, documents,
+}: ScoringInputs): ScoringOutput {
+  let bps = 250; // base 2.50% with room for penalties
   const reasons: string[] = [];
 
   const inst = INSTITUTIONS.find(i => i.value === institution) ?? INSTITUTIONS[6];
   bps += inst.riskBps;
-  if (inst.riskBps <= -40) reasons.push(`${inst.label} es banco top — liquidación confiable, descuento más bajo.`);
-  else if (inst.riskBps >= 50) reasons.push(`Sin banco detrás — riesgo más alto, descuento más amplio.`);
-  else if (inst.riskBps < 0) reasons.push(`${inst.label}: riesgo medio, descuento ajustado.`);
-  else reasons.push(`${inst.label}: tomamos el descuento base.`);
+  if (inst.riskBps <= -40) reasons.push(`${inst.label} es banco top — liquidación confiable.`);
+  else if (inst.riskBps >= 50) reasons.push(`Sin banco detrás — riesgo alto, descuento más amplio.`);
+  else if (inst.riskBps < 0) reasons.push(`${inst.label}: riesgo medio.`);
+  else reasons.push(`${inst.label}: riesgo base.`);
 
-  if (amount >= 1_000_000) { bps -= 20; reasons.push(`Monto alto ($${amount.toLocaleString('es-MX')}): escala, margen más apretado.`); }
-  else if (amount <= 200_000) { bps += 15; reasons.push(`Monto bajo ($${amount.toLocaleString('es-MX')}): unit economics más delgados, pequeño ajuste al alza.`); }
-  else reasons.push(`Monto medio ($${amount.toLocaleString('es-MX')}): en rango típico.`);
+  if (amount >= 1_000_000) { bps -= 20; reasons.push(`Monto alto: margen apretado por escala.`); }
+  else if (amount <= 200_000) { bps += 15; reasons.push(`Monto bajo: ajuste al alza por unit economics.`); }
 
-  if (termDays <= 21) { bps -= 15; reasons.push(`Plazo corto (${termDays} días): menos riesgo temporal.`); }
-  else if (termDays >= 60) { bps += 40; reasons.push(`Plazo largo (${termDays} días): más exposición, ajuste al alza.`); }
-  else reasons.push(`Plazo estándar (${termDays} días).`);
+  if (termDays <= 21) { bps -= 15; reasons.push(`Plazo corto (${termDays} días): menos exposición.`); }
+  else if (termDays >= 60) { bps += 40; reasons.push(`Plazo largo (${termDays} días): más exposición.`); }
 
-  if (knownClient) { bps -= 25; reasons.push(`Cliente recurrente: track record positivo, descuento más bajo.`); }
+  if (knownClient) { bps -= 25; reasons.push(`Cliente recurrente: track record.`); }
 
-  bps = Math.max(150, Math.min(600, bps));
+  // --- Blindajes estructurales (los que realmente movían la aguja) -------
+  const stake = STAKING_LEVELS.find(s => s.value === staking) ?? STAKING_LEVELS[0];
+  bps += stake.delta;
+  if (stake.delta > 100) reasons.push(`⚠️ Sin colateral del dealer: si inventa la venta los lenders absorben todo. +${stake.delta} bps.`);
+  else if (stake.delta > 0) reasons.push(`Colateral limitado (${stake.label}): cubre solo parte del riesgo.`);
+  else reasons.push(`Colateral sólido (${stake.label}): skin in the game real.`);
+
+  const rep = REPUTATION_LEVELS.find(r => r.value === reputation) ?? REPUTATION_LEVELS[0];
+  bps += rep.delta;
+  if (rep.delta > 100) reasons.push(`⚠️ Dealer nuevo: cero historial de settlements en Aforo. +${rep.delta} bps.`);
+  else if (rep.delta > 0) reasons.push(`Reputación emergente: historial corto en la plataforma.`);
+  else reasons.push(`Reputación establecida: track record extenso de settlements a tiempo.`);
+
+  const docCount = Number(documents.factura) + Number(documents.contrato) + Number(documents.cartaBanco);
+  if (docCount === 3) {
+    bps -= 100;
+    reasons.push(`Documentación completa (factura + contrato + carta bancaria): verificable fuera de cadena.`);
+  } else if (docCount === 2) {
+    bps -= 40;
+    reasons.push(`Documentación parcial (${docCount} de 3): riesgo acotado.`);
+  } else if (docCount === 1) {
+    bps += 50;
+    reasons.push(`⚠️ Documentación incompleta (${docCount} de 3): verificación limitada.`);
+  } else {
+    bps += 150;
+    reasons.push(`⚠️ Sin documentos: los lenders no pueden verificar que la venta existe. +150 bps.`);
+  }
+
+  bps = Math.max(100, Math.min(1500, bps));
 
   const discountPct = (bps / 100).toFixed(2);
-  // Convert period discount to approximate annualized CAT for comparison purposes.
   const periods = 365 / Math.max(1, termDays);
-  const ourCatAnnualized = (((1 + bps / 10000) ** periods - 1) * 100).toFixed(1);
+  const ourCatAnnualized = (((1 + bps / 10000) ** periods - 1) * 100).toFixed(0);
 
   return {
     discountBps: bps,
