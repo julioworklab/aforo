@@ -11,13 +11,13 @@
 
 ---
 
-**Imagínate a tu tío.**
+**Un lote de autos en Monterrey.**
 
-Tiene un lote de autos en Monterrey. Esta mañana vendió un Audi Q5 en **un millón y tanto de pesos**. El cliente lo va a pagar con préstamo del banco. El carro ya salió del lote.
+Esta mañana vendió un Audi Q5 en **un millón y tanto de pesos**. El cliente lo va a pagar con préstamo del banco. El carro ya salió del lote.
 
-Pero tu tío **no tiene el millón todavía** — y no lo va a tener hasta dentro de **tres o cuatro semanas**, cuando el banco por fin suelte la lana.
+Pero el lote **no tiene el millón todavía** — y no lo va a tener hasta dentro de **tres o cuatro semanas**, cuando el banco por fin suelte la lana.
 
-Mientras tanto, no puede comprar el siguiente carro. Su propio dinero está atorado.
+Mientras tanto, no puede comprar el siguiente carro para revender. Su propio dinero está atorado.
 
 ---
 

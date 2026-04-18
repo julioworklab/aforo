@@ -99,7 +99,7 @@ Cambio de vuelta a wallet del Dealer.
 ## Cosas que SÍ debo decir
 
 - ✅ "Le adelantamos la lana"
-- ✅ "Tu tío / el dentista / la señora que vende X"
+- ✅ "Un lote de autos en Monterrey / un dentista que vende equipo a plazos / cualquier negocio que vende y espera"
 - ✅ "5 mil pesos / un millón de pesos" (nunca USD)
 - ✅ "Programa de computadora que guarda el dinero" (explicando smart contracts)
 - ✅ "Lo que le van a pagar en tres semanas" (en vez de "receivable")

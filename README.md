@@ -6,17 +6,13 @@
 
 ## El problema con palabras simples
 
-Imagínate a tu tío. Tiene un lote de autos usados. Hoy vendió un carro en **un millón de pesos**. El cliente lo va a pagar con préstamo del banco. El carro ya salió del lote.
+Un lote de autos usados en Monterrey vende un carro en **un millón de pesos**. El cliente lo va a pagar con préstamo del banco. El carro ya salió del lote.
 
-Pero tu tío **no tiene el millón** — y no lo va a tener hasta dentro de **tres o cuatro semanas**, cuando el banco por fin suelte la lana.
+Pero el lote **no tiene el millón** — y no lo va a tener hasta dentro de **tres o cuatro semanas**, cuando el banco por fin suelte la lana.
 
-Mientras tanto su negocio se frena. No puede comprar el siguiente carro para revender. Su propio dinero está atorado.
+Mientras tanto el negocio se frena. No puede comprar el siguiente carro para revender. Su propio dinero está atorado.
 
-Esto no le pasa solo a los lotes de autos. Le pasa a:
-- El **dentista** que vende un equipo a plazos
-- El que vende **maquinaria agrícola**
-- El que vende **motos**
-- Cualquier negocio que vende con crédito y tiene que esperar semanas para cobrar
+Y no es solo un lote de autos. Es **cualquier negocio que vende a plazos o con financiamiento** y tiene que esperar semanas para cobrar.
 
 **7 de cada 10 negocios chicos en México no tienen acceso a crédito rápido.** No porque no lo merezcan — sino porque a los bancos no les conviene hacer préstamos chiquitos. El papeleo les cuesta más de lo que les deja.
 
