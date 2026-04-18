@@ -155,11 +155,151 @@ export default function DealerView() {
   const discountBps = BigInt(Math.round((parseFloat(discount) || 0) * 100));
   const fundingGoal = discountBps > 0n ? (faceValueBig * (10000n - discountBps)) / 10000n : 0n;
 
+  const [formOpen, setFormOpen] = useState(false);
+
+  // Render helper — sales list (goes above the form for clean UX)
+  const salesList = (
+    <>
+      <div className="section-title" style={{ marginTop: 0 }}>
+        Mis ventas registradas ({myReceivables.length})
+      </div>
+      {myReceivables.length === 0 ? (
+        <div className="card" style={{ textAlign: 'center', color: '#666' }}>
+          Aún no has registrado ventas por cobrar. Abre el recuadro de abajo para registrar una.
+        </div>
+      ) : (
+        myReceivables.map(({ id, data }) => {
+          if (!data) return null;
+          const pct = data.fundingGoal > 0n ? Number((data.fundedAmount * 100n) / data.fundingGoal) : 0;
+          const receivedByDealer = (data.fundingGoal * 9950n) / 10000n;
+          const operationCost = data.faceValue - receivedByDealer;
+          const costPct = data.faceValue > 0n
+            ? (Number(operationCost) / Number(data.faceValue)) * 100
+            : 0;
+          const nowSec = BigInt(Math.floor(Date.now() / 1000));
+          const secsRemaining = data.settlementDeadline > nowSec
+            ? Number(data.settlementDeadline - nowSec)
+            : 0;
+          const daysRemaining = Math.ceil(secsRemaining / 86400);
+          return (
+            <div key={String(id)} className="card">
+              <div className="receivable-header">
+                <div>
+                  <div className="receivable-title">Venta #{String(id)}</div>
+                  <div className="receivable-ref mono">ref: {data.offchainRef.slice(0, 12)}…</div>
+                </div>
+                <span className={statusPillClass(data.status)}>{statusLabel(data.status)}</span>
+              </div>
+              <div className="receivable-meta">
+                <div className="meta-item">
+                  <div className="meta-label">Monto total</div>
+                  <div className="meta-value">${formatMXN(data.faceValue)} MXN</div>
+                </div>
+                <div className="meta-item">
+                  <div className="meta-label">Adelanto recibido</div>
+                  <div className="meta-value">${formatMXN(receivedByDealer)} MXN</div>
+                </div>
+                <div className="meta-item">
+                  <div className="meta-label">Costo por operación</div>
+                  <div className="meta-value" style={{ color: '#ff8a8a' }}>
+                    −${formatMXN(operationCost)} MXN
+                    <span style={{ fontSize: 11, color: '#888', fontWeight: 400, marginLeft: 4 }}>
+                      ({costPct.toFixed(2)}%)
+                    </span>
+                  </div>
+                </div>
+                <div className="meta-item">
+                  <div className="meta-label">Descuento</div>
+                  <div className="meta-value">{(Number(data.discountBps) / 100).toFixed(2)}%</div>
+                </div>
+                <div className="meta-item">
+                  <div className="meta-label">Plazo de cobro</div>
+                  <div className="meta-value">
+                    {formatDeadline(data.settlementDeadline)}
+                    {data.status !== 4 && data.status !== 5 && data.status !== 6 && (
+                      <span style={{ fontSize: 11, color: '#888', fontWeight: 400, marginLeft: 4 }}>
+                        ({daysRemaining > 0 ? `${daysRemaining} día${daysRemaining === 1 ? '' : 's'}` : 'vencido'})
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+              {data.status === 1 && (
+                <>
+                  <div className="progress"><div className="progress-bar" style={{ width: `${pct}%` }} /></div>
+                  <div style={{ fontSize: 12, color: '#888' }}>
+                    Fondeado ${formatMXN(data.fundedAmount)} de ${formatMXN(data.fundingGoal)} ({pct}%)
+                  </div>
+                </>
+              )}
+              <div className="actions" style={{ marginTop: 14 }}>
+                {data.status === 1 && (
+                  <button className="ghost" onClick={() => cancel(id)} disabled={isPending}>Cancelar</button>
+                )}
+                {data.status === 2 && (
+                  <button onClick={() => disburse(id)} disabled={isPending}>Recibir adelanto ahora</button>
+                )}
+                {data.status === 3 && (
+                  <button onClick={() => approveAndSettle(id, data.faceValue)} disabled={isPending}>
+                    Depositar ${formatMXN(data.faceValue)} MXN (ya cobré del banco)
+                  </button>
+                )}
+              </div>
+            </div>
+          );
+        })
+      )}
+    </>
+  );
+
   return (
     <div>
-      <div className="card">
-        <div className="section-title" style={{ marginTop: 0 }}>Registrar una nueva venta por cobrar</div>
-        <p style={{ color: '#888', fontSize: 13, marginBottom: 16 }}>
+      {salesList}
+
+      <div className="card" style={{ marginTop: 20, padding: 0, overflow: 'hidden' }}>
+        <button
+          onClick={() => setFormOpen(o => !o)}
+          style={{
+            width: '100%',
+            background: 'transparent',
+            color: 'white',
+            padding: '16px 20px',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            fontSize: 15,
+            fontWeight: 600,
+            borderRadius: 0,
+            boxShadow: 'none',
+          }}
+        >
+          <span style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <span style={{
+              width: 22, height: 22, borderRadius: 6,
+              background: 'linear-gradient(135deg, #836EF9, #A0055D)',
+              display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: 14,
+            }}>+</span>
+            Registrar una nueva venta por cobrar
+          </span>
+          <span style={{
+            fontSize: 14, color: '#888',
+            transform: formOpen ? 'rotate(180deg)' : 'rotate(0deg)',
+            transition: 'transform 0.15s ease',
+          }}>▾</span>
+        </button>
+
+        {!formOpen && (
+          <div style={{ padding: '0 20px 16px', color: '#888', fontSize: 12, borderTop: '1px solid #1f1f2e' }}>
+            <div style={{ paddingTop: 12 }}>
+              Click para abrir el formulario y registrar una venta ya cerrada para recibir adelanto hoy.
+            </div>
+          </div>
+        )}
+
+        {formOpen && (
+          <div style={{ padding: '0 20px 20px', borderTop: '1px solid #1f1f2e' }}>
+        <p style={{ color: '#888', fontSize: 13, margin: '16px 0 16px' }}>
           Acabas de vender algo a plazos o con financiamiento del banco. Aquí lo registras para que te adelantemos la lana hoy mismo.
         </p>
 
@@ -341,101 +481,9 @@ export default function DealerView() {
             (Demo) Acuñar 2,000,000 MXN de prueba
           </button>
         </div>
+          </div>
+        )}
       </div>
-
-      <div className="section-title">Mis ventas registradas ({myReceivables.length})</div>
-      {myReceivables.length === 0 ? (
-        <div className="card" style={{ textAlign: 'center', color: '#666' }}>
-          Aún no has registrado ventas por cobrar.
-        </div>
-      ) : (
-        myReceivables.map(({ id, data }) => {
-          if (!data) return null;
-          const pct = data.fundingGoal > 0n ? Number((data.fundedAmount * 100n) / data.fundingGoal) : 0;
-          const receivedByDealer = (data.fundingGoal * 9950n) / 10000n;
-          // Total cost of the operation = what dealer repays minus what they received
-          // = faceValue - receivedByDealer  (already includes discount + protocol fee)
-          const operationCost = data.faceValue - receivedByDealer;
-          const costPct = data.faceValue > 0n
-            ? (Number(operationCost) / Number(data.faceValue)) * 100
-            : 0;
-          // Days remaining to deadline
-          const nowSec = BigInt(Math.floor(Date.now() / 1000));
-          const secsRemaining = data.settlementDeadline > nowSec
-            ? Number(data.settlementDeadline - nowSec)
-            : 0;
-          const daysRemaining = Math.ceil(secsRemaining / 86400);
-          return (
-            <div key={String(id)} className="card">
-              <div className="receivable-header">
-                <div>
-                  <div className="receivable-title">Venta #{String(id)}</div>
-                  <div className="receivable-ref mono">ref: {data.offchainRef.slice(0, 12)}…</div>
-                </div>
-                <span className={statusPillClass(data.status)}>{statusLabel(data.status)}</span>
-              </div>
-
-              <div className="receivable-meta">
-                <div className="meta-item">
-                  <div className="meta-label">Monto total</div>
-                  <div className="meta-value">${formatMXN(data.faceValue)} MXN</div>
-                </div>
-                <div className="meta-item">
-                  <div className="meta-label">Adelanto recibido</div>
-                  <div className="meta-value">${formatMXN(receivedByDealer)} MXN</div>
-                </div>
-                <div className="meta-item">
-                  <div className="meta-label">Costo por operación</div>
-                  <div className="meta-value" style={{ color: '#ff8a8a' }}>
-                    −${formatMXN(operationCost)} MXN
-                    <span style={{ fontSize: 11, color: '#888', fontWeight: 400, marginLeft: 4 }}>
-                      ({costPct.toFixed(2)}%)
-                    </span>
-                  </div>
-                </div>
-                <div className="meta-item">
-                  <div className="meta-label">Descuento</div>
-                  <div className="meta-value">{(Number(data.discountBps) / 100).toFixed(2)}%</div>
-                </div>
-                <div className="meta-item">
-                  <div className="meta-label">Plazo de cobro</div>
-                  <div className="meta-value">
-                    {formatDeadline(data.settlementDeadline)}
-                    {data.status !== 4 && data.status !== 5 && data.status !== 6 && (
-                      <span style={{ fontSize: 11, color: '#888', fontWeight: 400, marginLeft: 4 }}>
-                        ({daysRemaining > 0 ? `${daysRemaining} día${daysRemaining === 1 ? '' : 's'}` : 'vencido'})
-                      </span>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              {data.status === 1 && (
-                <>
-                  <div className="progress"><div className="progress-bar" style={{ width: `${pct}%` }} /></div>
-                  <div style={{ fontSize: 12, color: '#888' }}>
-                    Fondeado ${formatMXN(data.fundedAmount)} de ${formatMXN(data.fundingGoal)} ({pct}%)
-                  </div>
-                </>
-              )}
-
-              <div className="actions" style={{ marginTop: 14 }}>
-                {data.status === 1 && (
-                  <button className="ghost" onClick={() => cancel(id)} disabled={isPending}>Cancelar</button>
-                )}
-                {data.status === 2 && (
-                  <button onClick={() => disburse(id)} disabled={isPending}>Recibir adelanto ahora</button>
-                )}
-                {data.status === 3 && (
-                  <button onClick={() => approveAndSettle(id, data.faceValue)} disabled={isPending}>
-                    Depositar ${formatMXN(data.faceValue)} MXN (ya cobré del banco)
-                  </button>
-                )}
-              </div>
-            </div>
-          );
-        })
-      )}
 
       {txConfirming && <div style={{ marginTop: 10, fontSize: 13, color: '#ffcc5c' }}>Confirmando transacción…</div>}
     </div>
