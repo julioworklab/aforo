@@ -115,6 +115,48 @@ export function readTiming(action: 'fund' | 'claim', id: bigint, address: string
   return s[`${action}:${String(id)}:${address.toLowerCase()}`] ?? null;
 }
 
+// --- Per-receivable risk profile registry ---
+
+export type RiskProfile = {
+  staking: StakingLevel;
+  reputation: ReputationLevel;
+  documents: DocumentsUploaded;
+};
+
+const RISK_KEY = 'aforo:riskProfiles:v1';
+
+export function saveRiskProfile(receivableId: number | bigint, profile: RiskProfile) {
+  if (typeof localStorage === 'undefined') return;
+  let store: Record<string, RiskProfile> = {};
+  try { store = JSON.parse(localStorage.getItem(RISK_KEY) ?? '{}'); } catch {}
+  store[String(receivableId)] = profile;
+  localStorage.setItem(RISK_KEY, JSON.stringify(store));
+}
+
+export function readRiskProfile(receivableId: number | bigint): RiskProfile | null {
+  if (typeof localStorage === 'undefined') return null;
+  try {
+    const store = JSON.parse(localStorage.getItem(RISK_KEY) ?? '{}');
+    return store[String(receivableId)] ?? null;
+  } catch {
+    return null;
+  }
+}
+
+/** 0–100 confidence score derived from the three blindaje factors.
+ *  Useful for a single visual indicator on the Lender side. */
+export function trustScore(p: RiskProfile | null): number {
+  if (!p) return 0;
+  let s = 0;
+  // Staking (40 pts)
+  s += ({ none: 0, low: 15, medium: 28, high: 40 } as const)[p.staking];
+  // Reputation (35 pts)
+  s += ({ new: 0, emerging: 12, established: 24, veteran: 35 } as const)[p.reputation];
+  // Docs (25 pts)
+  s += (Number(p.documents.factura) + Number(p.documents.contrato) + Number(p.documents.cartaBanco)) * 8;
+  return Math.min(100, s);
+}
+
 // ===== Agente Aforo — scoring engine en el navegador ========================
 
 export type Institution =

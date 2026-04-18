@@ -5,7 +5,9 @@ import rmAbi from '../receivable-market-abi.json';
 import usdcAbi from '../mock-usdc-abi.json';
 import {
   formatMXN, parseMXN, statusPillClass, statusLabel,
-  formatDeadline, annualizePct, stampTiming, readTiming, type Receivable,
+  formatDeadline, annualizePct, stampTiming, readTiming,
+  readRiskProfile, trustScore, STAKING_LEVELS, REPUTATION_LEVELS,
+  type Receivable,
 } from '../lib';
 
 export default function LenderView() {
@@ -214,6 +216,18 @@ export default function LenderView() {
           const projectedPayout = (remaining * data.faceValue) / data.fundingGoal;
           const projectedProfit = projectedPayout - remaining;
 
+          // Risk profile of the dealer who listed this receivable
+          const risk = readRiskProfile(id);
+          const score = trustScore(risk);
+          const scoreColor = score >= 70 ? '#86ffc6' : score >= 40 ? '#ffcc5c' : '#ff8a8a';
+          const scoreLabel = score >= 70 ? 'Alto' : score >= 40 ? 'Medio' : 'Bajo';
+
+          const stakeInfo = risk ? STAKING_LEVELS.find(s => s.value === risk.staking) : null;
+          const repInfo = risk ? REPUTATION_LEVELS.find(r => r.value === risk.reputation) : null;
+          const docCount = risk
+            ? Number(risk.documents.factura) + Number(risk.documents.contrato) + Number(risk.documents.cartaBanco)
+            : 0;
+
           return (
             <div key={key} className="card">
               <div className="receivable-header">
@@ -222,6 +236,59 @@ export default function LenderView() {
                   <div className="receivable-ref mono">negocio: {data.dealer.slice(0, 8)}…{data.dealer.slice(-4)}</div>
                 </div>
                 <span className={statusPillClass(data.status)}>{statusLabel(data.status)}</span>
+              </div>
+
+              {/* Dealer trust panel — lender's own risk read, independent of the agent's suggested discount */}
+              <div style={{
+                background: '#0c0c12',
+                border: `1px solid ${scoreColor}33`,
+                borderRadius: 10,
+                padding: 12,
+                marginBottom: 12,
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                  <div style={{ fontSize: 11, color: '#888', textTransform: 'uppercase', letterSpacing: 0.5, fontWeight: 600 }}>
+                    🛡️ Perfil del negocio
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
+                    <span style={{ fontSize: 11, color: '#888' }}>Confianza</span>
+                    <span style={{ fontSize: 18, fontWeight: 700, color: scoreColor }}>{score}</span>
+                    <span style={{ fontSize: 11, color: scoreColor }}>/ 100 · {scoreLabel}</span>
+                  </div>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10 }}>
+                  <div>
+                    <div style={{ fontSize: 10, color: '#888', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 3 }}>Colateral</div>
+                    <div style={{ fontSize: 12, color: stakeInfo?.delta ?? 999 >= 100 ? '#ff8a8a' : stakeInfo?.delta && stakeInfo.delta < 0 ? '#86ffc6' : '#ccc', fontWeight: 500 }}>
+                      {stakeInfo?.label ?? 'Sin datos'}
+                    </div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 10, color: '#888', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 3 }}>Historial</div>
+                    <div style={{ fontSize: 12, color: repInfo?.delta ?? 999 >= 100 ? '#ff8a8a' : repInfo?.delta && repInfo.delta < 0 ? '#86ffc6' : '#ccc', fontWeight: 500 }}>
+                      {repInfo?.label ?? 'Sin datos'}
+                    </div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 10, color: '#888', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 3 }}>Documentos</div>
+                    <div style={{ fontSize: 12, color: docCount === 3 ? '#86ffc6' : docCount === 0 ? '#ff8a8a' : '#ffcc5c', fontWeight: 500 }}>
+                      {docCount} de 3 {risk && (
+                        <span style={{ color: '#888', fontWeight: 400, fontSize: 10, marginLeft: 4 }}>
+                          {risk.documents.factura ? '📄' : ''}
+                          {risk.documents.contrato ? '📑' : ''}
+                          {risk.documents.cartaBanco ? '🏦' : ''}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {score < 40 && (
+                  <div style={{ marginTop: 10, padding: '6px 10px', background: 'rgba(255, 138, 138, 0.1)', border: '1px solid rgba(255, 138, 138, 0.3)', borderRadius: 6, fontSize: 11, color: '#ff8a8a' }}>
+                    ⚠️ Perfil de alto riesgo — evalúa si el descuento compensa la exposición.
+                  </div>
+                )}
               </div>
 
               <div className="receivable-meta">

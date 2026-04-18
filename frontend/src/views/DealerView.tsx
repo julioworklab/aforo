@@ -9,6 +9,7 @@ import {
   scoreDiscount, INSTITUTIONS, type Institution,
   STAKING_LEVELS, REPUTATION_LEVELS,
   type StakingLevel, type ReputationLevel, type DocumentsUploaded,
+  saveRiskProfile,
 } from '../lib';
 
 export default function DealerView() {
@@ -96,6 +97,9 @@ export default function DealerView() {
       args: [face, bps, 50n, deadline, ref],
     });
     setLastTxHash(hash);
+    // Attach risk profile to the id this tx is about to create.
+    const newId = (nextId ? Number(nextId as bigint) : 0) + 1;
+    saveRiskProfile(newId, { staking, reputation, documents });
   }
 
   async function disburse(id: bigint) {
