@@ -11,13 +11,13 @@
 
 ---
 
-**Un lote de autos en Monterrey.**
+**Un lote de autos seminuevos en Monterrey.**
 
-Esta mañana vendió un Audi Q5 en **un millón y tanto de pesos**. El cliente lo va a pagar con préstamo del banco. El carro ya salió del lote.
+Esta mañana vendió un carro en **un millón de pesos**. El cliente lo va a pagar con préstamo del banco. El carro ya salió del lote.
 
-Pero el lote **no tiene el millón todavía** — y no lo va a tener hasta dentro de **tres o cuatro semanas**, cuando el banco por fin suelte la lana.
+Pero el lote **no tiene el millón** — y no lo va a tener hasta dentro de **tres o cuatro semanas**, cuando el banco por fin le entregue el monto acordado.
 
-Mientras tanto, no puede comprar el siguiente carro para revender. Su propio dinero está atorado.
+Mientras tanto el negocio se frena. No puede comprar el siguiente carro para revender. Su propio dinero está atorado.
 
 ---
 
@@ -33,7 +33,7 @@ Mientras tanto, no puede comprar el siguiente carro para revender. Su propio din
 
 **7 de cada 10 negocios chicos en México no tienen crédito rápido.**
 
-No porque no lo merezcan — sino porque a los bancos no les conviene hacer préstamos de $50,000 pesos. El papeleo les cuesta más de lo que les deja.
+No porque no lo merezcan — sino porque a los bancos no les conviene hacer préstamos de montos pequeños. El papeleo les cuesta más de lo que les deja.
 
 > **Hay un hueco de $5 billones de pesos** en crédito para pequeñas y medianas empresas en México. (Fuente: Banco Mundial)
 
