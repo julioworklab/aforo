@@ -1,0 +1,37 @@
+# Foundry
+out/
+cache/
+broadcast/*/31337/
+broadcast/**/dry-run/
+
+# Node
+node_modules/
+.next/
+dist/
+build/
+
+# Env
+.env
+.env.local
+.env.*.local
+*.key
+*.pem
+
+# OS
+.DS_Store
+._*
+Thumbs.db
+
+# Editors
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs
+*.log
+npm-debug.log*
+
+# Wallet
+.monad-wallet
+deployment.json

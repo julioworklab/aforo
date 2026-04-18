@@ -1,0 +1,86 @@
+# Aforo
+
+**Le adelantamos la lana.** A los pequeños negocios que vendieron y están esperando cobrar.
+
+---
+
+## El problema con palabras simples
+
+Imagínate a tu tío. Tiene un lote de autos usados. Hoy vendió un carro en **un millón de pesos**. El cliente lo va a pagar con préstamo del banco. El carro ya salió del lote.
+
+Pero tu tío **no tiene el millón** — y no lo va a tener hasta dentro de **tres o cuatro semanas**, cuando el banco por fin suelte la lana.
+
+Mientras tanto su negocio se frena. No puede comprar el siguiente carro para revender. Su propio dinero está atorado.
+
+Esto no le pasa solo a los lotes de autos. Le pasa a:
+- El **dentista** que vende un equipo a plazos
+- El que vende **maquinaria agrícola**
+- El que vende **motos**
+- Cualquier negocio que vende con crédito y tiene que esperar semanas para cobrar
+
+**7 de cada 10 negocios chicos en México no tienen acceso a crédito rápido.** No porque no lo merezcan — sino porque a los bancos no les conviene hacer préstamos chiquitos. El papeleo les cuesta más de lo que les deja.
+
+---
+
+## La solución con palabras simples
+
+**Aforo le da su dinero al negocio hoy mismo.**
+
+Un grupo de personas con ahorros le presta al negocio el dinero que está esperando. El negocio les paga un pedacito (un 3% por ejemplo) por el favor. Cuando el banco finalmente suelta la lana en tres semanas, esas personas recuperan su dinero con una ganancia.
+
+- **El negocio:** cobra hoy en vez de esperar un mes.
+- **Los que prestaron:** ganan más que dejar su dinero en el banco.
+- **Nosotros:** cobramos un pedacito por hacer que todo cuadre.
+
+Todo lo hace un **programa de computadora** que guarda el dinero hasta que se cumplen las reglas que todos aceptaron. Nadie se puede quedar con el dinero que no le toca, porque está a la vista de todos.
+
+---
+
+## ¿Por qué en Monad y no en otra red?
+
+Monad es una red de computadoras donde mover dinero cuesta casi nada. Eso nos permite atender préstamos hasta de **cinco mil pesos** — cosa que los bancos jamás harían, y que en otras redes tampoco sería rentable.
+
+Tres razones técnicas, en simple:
+
+1. **Cobrar poco por tx** — si mover el dinero cuesta 5 pesos en vez de 50, podemos hacer préstamos chicos y aún así ganar.
+2. **El dinero de los prestamistas no se queda dormido** — entre un préstamo y otro, está generando rendimiento automático en otros lugares de la misma red.
+3. **Muchos préstamos al mismo tiempo sin tráfico** — la red procesa préstamos en paralelo, no en fila. Aguanta al crecer.
+
+---
+
+## Estado actual
+
+- 🏗️ **Construido en:** Monad Blitz Monterrey, 18 de abril 2026
+- 🎯 **Primer cliente piloto:** Trébol Motors (Monterrey, NL)
+- 🚀 **Producto:** smart contract desplegado en Monad testnet
+
+---
+
+## Roadmap
+
+| Fase | Qué construimos | Cuándo |
+|------|----------------|--------|
+| 1 | Piloto con 1 lote de autos (Trébol Motors) | Hoy → 3 meses |
+| 2 | 10–20 lotes de autos en Nuevo León | 3–9 meses |
+| 3 | Expansión a motos, maquinaria, equipo médico | 9–18 meses |
+| 4 | Multi-país (LATAM) + capital institucional | 18–36 meses |
+
+---
+
+## Estructura del repo
+
+```
+aforo/
+├── src/                    # Smart contracts (Solidity)
+├── script/                 # Deploy scripts (Foundry)
+├── test/                   # Tests
+├── agent/                  # Scoring agent (Node)
+├── frontend/               # Next.js app (Dealer + Lender views)
+└── docs/                   # Pitch, demo script, technical notes
+```
+
+---
+
+## Licencia
+
+MIT
