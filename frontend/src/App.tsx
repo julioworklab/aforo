@@ -129,17 +129,17 @@ function WalletPicker({
     {
       name: 'MetaMask',
       href: `https://metamask.app.link/dapp/${currentHost}${currentPath}`,
-      bg: 'linear-gradient(135deg, #f6851b, #e2761b)',
+      icon: '/wallets/metamask.png',
     },
     {
       name: 'Phantom',
       href: `https://phantom.app/ul/browse/${encodeURIComponent(currentFullUrl)}?ref=${encodeURIComponent(currentOrigin)}`,
-      bg: 'linear-gradient(135deg, #ab9ff2, #4a3cc5)',
+      icon: '/wallets/phantom.png',
     },
     {
       name: 'Rainbow',
       href: `https://rnbwapp.com/browse?url=${encodeURIComponent(currentFullUrl)}`,
-      bg: 'linear-gradient(135deg, #ff7a59, #ffb13b, #4ac1ff, #9b4bff)',
+      icon: '/wallets/rainbow.png',
     },
   ];
 
@@ -154,19 +154,24 @@ function WalletPicker({
             target="_blank"
             rel="noopener noreferrer"
             style={{
-              background: w.bg,
+              background: 'linear-gradient(135deg, #836EF9, #A0055D)',
               color: 'white',
               padding: '10px 14px',
               borderRadius: 8,
               fontWeight: 600,
-              fontSize: 13,
+              fontSize: 14,
               textDecoration: 'none',
               display: 'inline-flex',
               alignItems: 'center',
-              gap: 6,
+              gap: 8,
             }}
           >
-            📱 {w.name}
+            <img
+              src={w.icon}
+              alt=""
+              style={{ width: 18, height: 18, borderRadius: 4, verticalAlign: 'middle' }}
+            />
+            {w.name}
           </a>
         ))}
       </div>
@@ -200,16 +205,20 @@ function WalletPicker({
           target="_blank"
           rel="noopener noreferrer"
           style={{
-            background: w.bg,
+            background: 'linear-gradient(135deg, #836EF9, #A0055D)',
             color: 'white',
             padding: '10px 14px',
             borderRadius: 8,
             fontWeight: 600,
-            fontSize: 13,
+            fontSize: 14,
             textDecoration: 'none',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 8,
           }}
         >
-          📱 {w.name}
+          <img src={w.icon} alt="" style={{ width: 18, height: 18, borderRadius: 4 }} />
+          {w.name}
         </a>
       ))}
     </div>
