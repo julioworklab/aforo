@@ -1,30 +1,28 @@
 import { formatUnits, parseUnits, keccak256, toHex } from 'viem';
 
-export const USDC_DECIMALS = 6;
+export const TOKEN_DECIMALS = 6;
 
-export const STATUS_NAMES = [
-  'None',
-  'Listed',
-  'Funded',
-  'Disbursed',
-  'Settled',
-  'Defaulted',
-  'Cancelled',
-] as const;
-
-export function formatUSDC(raw: bigint | undefined): string {
+/** Formats a bigint amount into Mexican-peso-style string (no currency suffix).
+ *  Drops decimals when amount is a whole number for readability. */
+export function formatMXN(raw: bigint | undefined, opts: { showDecimals?: boolean } = {}): string {
   if (raw === undefined) return '—';
-  const amount = Number(formatUnits(raw, USDC_DECIMALS));
+  const amount = Number(formatUnits(raw, TOKEN_DECIMALS));
+  const showDecimals = opts.showDecimals ?? (amount % 1 !== 0);
   return amount.toLocaleString('es-MX', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
+    minimumFractionDigits: showDecimals ? 2 : 0,
+    maximumFractionDigits: showDecimals ? 2 : 0,
   });
 }
 
-export function parseUSDC(input: string): bigint {
-  const cleaned = input.replace(/,/g, '').trim();
-  return parseUnits(cleaned || '0', USDC_DECIMALS);
+/** Alias kept for legacy callers. */
+export const formatUSDC = formatMXN;
+
+export function parseMXN(input: string): bigint {
+  const cleaned = input.replace(/,/g, '').replace(/\$/g, '').trim();
+  return parseUnits(cleaned || '0', TOKEN_DECIMALS);
 }
+
+export const parseUSDC = parseMXN;
 
 export function statusPillClass(status: number): string {
   switch (status) {
@@ -54,10 +52,6 @@ export function offchainRef(label: string): `0x${string}` {
   return keccak256(toHex(label));
 }
 
-export function shortHex(hex: string): string {
-  return `${hex.slice(0, 8)}…${hex.slice(-6)}`;
-}
-
 export function daysFromNow(days: number): bigint {
   return BigInt(Math.floor(Date.now() / 1000) + days * 86400);
 }
@@ -82,3 +76,78 @@ export type Receivable = {
   status: number;
   settledAmount: bigint;
 };
+
+// ===== Agente Aforo — scoring engine en el navegador ========================
+
+export type Institution =
+  | 'bbva'
+  | 'santander'
+  | 'banorte'
+  | 'hsbc'
+  | 'banregio'
+  | 'sofom_externa'
+  | 'financiera_dealer'
+  | 'credito_directo';
+
+export const INSTITUTIONS: { value: Institution; label: string; riskBps: number }[] = [
+  { value: 'bbva', label: 'BBVA México', riskBps: -50 },
+  { value: 'santander', label: 'Santander', riskBps: -50 },
+  { value: 'banorte', label: 'Banorte', riskBps: -50 },
+  { value: 'hsbc', label: 'HSBC', riskBps: -40 },
+  { value: 'banregio', label: 'Banregio', riskBps: -30 },
+  { value: 'sofom_externa', label: 'SOFOM externa', riskBps: -10 },
+  { value: 'financiera_dealer', label: 'Financiera del lote', riskBps: 0 },
+  { value: 'credito_directo', label: 'Crédito directo al cliente (sin banco)', riskBps: 80 },
+];
+
+export type ScoringInputs = {
+  amount: number;       // MXN
+  termDays: number;
+  institution: Institution;
+  knownClient: boolean;
+};
+
+export type ScoringOutput = {
+  discountBps: number;
+  discountPct: string;  // "2.15"
+  reasons: string[];
+  benchmarkCat: string;
+  ourCatAnnualized: string;
+};
+
+export function scoreDiscount({ amount, termDays, institution, knownClient }: ScoringInputs): ScoringOutput {
+  let bps = 300; // base 3.00%
+  const reasons: string[] = [];
+
+  const inst = INSTITUTIONS.find(i => i.value === institution) ?? INSTITUTIONS[6];
+  bps += inst.riskBps;
+  if (inst.riskBps <= -40) reasons.push(`${inst.label} es banco top — liquidación confiable, descuento más bajo.`);
+  else if (inst.riskBps >= 50) reasons.push(`Sin banco detrás — riesgo más alto, descuento más amplio.`);
+  else if (inst.riskBps < 0) reasons.push(`${inst.label}: riesgo medio, descuento ajustado.`);
+  else reasons.push(`${inst.label}: tomamos el descuento base.`);
+
+  if (amount >= 1_000_000) { bps -= 20; reasons.push(`Monto alto ($${amount.toLocaleString('es-MX')}): escala, margen más apretado.`); }
+  else if (amount <= 200_000) { bps += 15; reasons.push(`Monto bajo ($${amount.toLocaleString('es-MX')}): unit economics más delgados, pequeño ajuste al alza.`); }
+  else reasons.push(`Monto medio ($${amount.toLocaleString('es-MX')}): en rango típico.`);
+
+  if (termDays <= 21) { bps -= 15; reasons.push(`Plazo corto (${termDays} días): menos riesgo temporal.`); }
+  else if (termDays >= 60) { bps += 40; reasons.push(`Plazo largo (${termDays} días): más exposición, ajuste al alza.`); }
+  else reasons.push(`Plazo estándar (${termDays} días).`);
+
+  if (knownClient) { bps -= 25; reasons.push(`Cliente recurrente: track record positivo, descuento más bajo.`); }
+
+  bps = Math.max(150, Math.min(600, bps));
+
+  const discountPct = (bps / 100).toFixed(2);
+  // Convert period discount to approximate annualized CAT for comparison purposes.
+  const periods = 365 / Math.max(1, termDays);
+  const ourCatAnnualized = (((1 + bps / 10000) ** periods - 1) * 100).toFixed(1);
+
+  return {
+    discountBps: bps,
+    discountPct,
+    reasons,
+    benchmarkCat: '25–40',
+    ourCatAnnualized,
+  };
+}

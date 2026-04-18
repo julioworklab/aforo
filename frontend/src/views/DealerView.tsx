@@ -1,11 +1,12 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useAccount, useReadContract, useWriteContract, useWaitForTransactionReceipt, useReadContracts } from 'wagmi';
 import { CONTRACTS } from '../config';
 import rmAbi from '../receivable-market-abi.json';
 import usdcAbi from '../mock-usdc-abi.json';
 import {
-  formatUSDC, parseUSDC, statusPillClass, statusLabel,
+  formatMXN, parseMXN, statusPillClass, statusLabel,
   offchainRef, daysFromNow, formatDeadline, type Receivable,
+  scoreDiscount, INSTITUTIONS, type Institution,
 } from '../lib';
 
 export default function DealerView() {
@@ -14,15 +15,31 @@ export default function DealerView() {
   // Form state
   const [dealName, setDealName] = useState('Alan Valadez — Audi Q5');
   const [faceMXN, setFaceMXN] = useState('1080000');
-  const [discount, setDiscount] = useState('3');
+  const [discount, setDiscount] = useState('3.00');
   const [deadlineDays, setDeadlineDays] = useState('28');
+  const [institution, setInstitution] = useState<Institution>('bbva');
+  const [knownClient, setKnownClient] = useState(true);
+  const [userOverrodeDiscount, setUserOverrodeDiscount] = useState(false);
+
+  // Agent scoring — re-runs as form changes
+  const scoring = useMemo(() => {
+    const amount = parseFloat(faceMXN.replace(/[,\s$]/g, '')) || 0;
+    const termDays = parseInt(deadlineDays) || 28;
+    return scoreDiscount({ amount, termDays, institution, knownClient });
+  }, [faceMXN, deadlineDays, institution, knownClient]);
+
+  // Keep the discount field in sync with the agent unless user manually overrode it.
+  useEffect(() => {
+    if (!userOverrodeDiscount) {
+      setDiscount(scoring.discountPct);
+    }
+  }, [scoring.discountPct, userOverrodeDiscount]);
 
   // Tx state
   const { writeContractAsync, isPending } = useWriteContract();
   const [lastTxHash, setLastTxHash] = useState<`0x${string}` | undefined>();
   const { isLoading: txConfirming, isSuccess: txDone } = useWaitForTransactionReceipt({ hash: lastTxHash });
 
-  // Read total count
   const { data: nextId, refetch: refetchCount } = useReadContract({
     address: CONTRACTS.ReceivableMarket,
     abi: rmAbi,
@@ -30,7 +47,6 @@ export default function DealerView() {
     query: { refetchInterval: 5000 },
   });
 
-  // Read all receivables
   const total = nextId ? Number(nextId as bigint) : 0;
   const ids = Array.from({ length: total }, (_, i) => BigInt(i + 1));
   const { data: allReceivables, refetch: refetchAll } = useReadContracts({
@@ -43,7 +59,6 @@ export default function DealerView() {
     query: { refetchInterval: 5000 },
   });
 
-  // Re-fetch after any successful tx
   useEffect(() => {
     if (txDone) {
       refetchCount();
@@ -56,9 +71,8 @@ export default function DealerView() {
     data: r.result as unknown as Receivable | undefined,
   })).filter(r => r.data && r.data.dealer.toLowerCase() === address?.toLowerCase());
 
-  // Actions
   async function createReceivable() {
-    const face = parseUSDC(faceMXN);
+    const face = parseMXN(faceMXN);
     const bps = BigInt(Math.round(parseFloat(discount) * 100));
     const deadline = daysFromNow(parseInt(deadlineDays));
     const ref = offchainRef(dealName);
@@ -89,8 +103,6 @@ export default function DealerView() {
       args: [CONTRACTS.ReceivableMarket, faceValue],
     });
     setLastTxHash(approveHash);
-    // Follow-up settle should be a separate click in real UX. For hackathon demo,
-    // we do it right after.
     setTimeout(async () => {
       const settleHash = await writeContractAsync({
         address: CONTRACTS.ReceivableMarket,
@@ -112,20 +124,19 @@ export default function DealerView() {
     setLastTxHash(hash);
   }
 
-  // Faucet mUSDC for dealer to test settlement (optional convenience)
   async function mintTestUSDC() {
     const hash = await writeContractAsync({
       address: CONTRACTS.MockUSDC,
       abi: usdcAbi,
       functionName: 'mint',
-      args: [address, parseUSDC('2000000')],
+      args: [address, parseMXN('2000000')],
     });
     setLastTxHash(hash);
   }
 
-  const faceValue = parseUSDC(faceMXN);
-  const discountBps = BigInt(Math.round(parseFloat(discount || '0') * 100));
-  const fundingGoal = discountBps > 0n ? (faceValue * (10000n - discountBps)) / 10000n : 0n;
+  const faceValueBig = parseMXN(faceMXN);
+  const discountBps = BigInt(Math.round((parseFloat(discount) || 0) * 100));
+  const fundingGoal = discountBps > 0n ? (faceValueBig * (10000n - discountBps)) / 10000n : 0n;
 
   return (
     <div>
@@ -134,37 +145,100 @@ export default function DealerView() {
         <p style={{ color: '#888', fontSize: 13, marginBottom: 16 }}>
           Acabas de vender algo a plazos o con financiamiento del banco. Aquí lo registras para que te adelantemos la lana hoy mismo.
         </p>
-        <div className="row">
+
+        <div className="row" style={{ marginBottom: 12 }}>
           <div style={{ flex: 2 }}>
             <label>Nombre de la venta (interno)</label>
             <input value={dealName} onChange={e => setDealName(e.target.value)} placeholder="Ej: Alan Valadez — Audi Q5" />
           </div>
           <div>
-            <label>Monto total ($ MXN)</label>
+            <label>Monto total ($MXN)</label>
             <input value={faceMXN} onChange={e => setFaceMXN(e.target.value)} inputMode="numeric" />
-          </div>
-          <div>
-            <label>Descuento a prestamistas (%)</label>
-            <input value={discount} onChange={e => setDiscount(e.target.value)} inputMode="decimal" />
           </div>
           <div>
             <label>Plazo de cobro (días)</label>
             <input value={deadlineDays} onChange={e => setDeadlineDays(e.target.value)} inputMode="numeric" />
           </div>
         </div>
-        <div style={{ marginTop: 14, background: '#0c0c12', border: '1px solid #1f1f2e', padding: 14, borderRadius: 10 }}>
-          <div style={{ fontSize: 12, color: '#888', marginBottom: 6 }}>Recibirías aprox. (después del 0.5% de plataforma):</div>
-          <div style={{ fontSize: 24, fontWeight: 700, color: '#86ffc6' }}>
-            ${formatUSDC((fundingGoal * 9950n) / 10000n)} <span style={{ fontSize: 14, color: '#888' }}>mUSDC</span>
+
+        <div className="row" style={{ marginBottom: 12 }}>
+          <div style={{ flex: 2 }}>
+            <label>¿Quién va a pagar?</label>
+            <select value={institution} onChange={e => setInstitution(e.target.value as Institution)}>
+              {INSTITUTIONS.map(i => (
+                <option key={i.value} value={i.value}>{i.label}</option>
+              ))}
+            </select>
           </div>
-          <div style={{ fontSize: 12, color: '#666', marginTop: 4 }}>De ${formatUSDC(faceValue)} que te va a pagar el banco en {deadlineDays} días.</div>
+          <div style={{ minWidth: 220, flex: 1 }}>
+            <label>&nbsp;</label>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', textTransform: 'none', letterSpacing: 0, fontSize: 13, color: '#ccc', padding: '10px 12px', border: '1px solid #2a2a3a', borderRadius: 8, background: '#13131a', marginBottom: 0 }}>
+              <input
+                type="checkbox"
+                checked={knownClient}
+                onChange={e => setKnownClient(e.target.checked)}
+                style={{ width: 'auto' }}
+              />
+              Cliente recurrente
+            </label>
+          </div>
         </div>
-        <div style={{ marginTop: 14, display: 'flex', gap: 8 }}>
+
+        {/* Agent recommendation card */}
+        <div style={{ background: 'linear-gradient(135deg, rgba(131,110,249,0.1), rgba(160,5,93,0.08))', border: '1px solid rgba(131,110,249,0.25)', padding: 14, borderRadius: 10, marginBottom: 12 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+            <div style={{ fontSize: 12, color: '#b9a6ff', fontWeight: 600, letterSpacing: 0.5, textTransform: 'uppercase' }}>
+              💡 Agente Aforo sugiere
+            </div>
+            {userOverrodeDiscount && (
+              <button
+                className="ghost"
+                onClick={() => setUserOverrodeDiscount(false)}
+                style={{ fontSize: 11, padding: '4px 10px' }}
+              >
+                Usar sugerencia
+              </button>
+            )}
+          </div>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginBottom: 8 }}>
+            <div style={{ fontSize: 32, fontWeight: 700, color: 'white' }}>{scoring.discountPct}%</div>
+            <div style={{ fontSize: 13, color: '#888' }}>descuento sobre la venta · equivalente a <strong style={{ color: '#b9a6ff' }}>{scoring.ourCatAnnualized}% CAT anualizado</strong></div>
+          </div>
+          <div style={{ fontSize: 12, color: '#888', marginBottom: 10 }}>
+            <strong style={{ color: '#ff8a8a' }}>Factoring tradicional:</strong> {scoring.benchmarkCat}% CAT típico.
+          </div>
+          <ul style={{ margin: 0, paddingLeft: 18, fontSize: 12, color: '#aaa', lineHeight: 1.7 }}>
+            {scoring.reasons.map((r, i) => <li key={i}>{r}</li>)}
+          </ul>
+        </div>
+
+        <div className="row" style={{ marginBottom: 12 }}>
+          <div>
+            <label>Descuento final (puedes ajustar)</label>
+            <input
+              value={discount}
+              onChange={e => { setDiscount(e.target.value); setUserOverrodeDiscount(true); }}
+              inputMode="decimal"
+            />
+          </div>
+        </div>
+
+        <div style={{ marginTop: 14, background: '#0c0c12', border: '1px solid #1f1f2e', padding: 14, borderRadius: 10 }}>
+          <div style={{ fontSize: 12, color: '#888', marginBottom: 6 }}>Recibirías hoy (después del 0.5% de plataforma):</div>
+          <div style={{ fontSize: 28, fontWeight: 700, color: '#86ffc6', letterSpacing: -0.5 }}>
+            ${formatMXN((fundingGoal * 9950n) / 10000n)} <span style={{ fontSize: 14, color: '#888', fontWeight: 400 }}>MXN</span>
+          </div>
+          <div style={{ fontSize: 12, color: '#666', marginTop: 4 }}>
+            De ${formatMXN(faceValueBig)} MXN que te va a pagar el banco en {deadlineDays} días.
+          </div>
+        </div>
+
+        <div style={{ marginTop: 14, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           <button onClick={createReceivable} disabled={isPending}>
             {isPending ? 'Firmando...' : 'Registrar venta por cobrar'}
           </button>
           <button className="ghost" onClick={mintTestUSDC} disabled={isPending}>
-            (Demo) Acuñar 2M mUSDC para mi wallet
+            (Demo) Acuñar 2,000,000 MXN de prueba
           </button>
         </div>
       </div>
@@ -178,6 +252,7 @@ export default function DealerView() {
         myReceivables.map(({ id, data }) => {
           if (!data) return null;
           const pct = data.fundingGoal > 0n ? Number((data.fundedAmount * 100n) / data.fundingGoal) : 0;
+          const receivedByDealer = (data.fundingGoal * 9950n) / 10000n;
           return (
             <div key={String(id)} className="card">
               <div className="receivable-header">
@@ -191,15 +266,15 @@ export default function DealerView() {
               <div className="receivable-meta">
                 <div className="meta-item">
                   <div className="meta-label">Monto total</div>
-                  <div className="meta-value">${formatUSDC(data.faceValue)}</div>
+                  <div className="meta-value">${formatMXN(data.faceValue)} MXN</div>
                 </div>
                 <div className="meta-item">
-                  <div className="meta-label">Adelanto que recibes</div>
-                  <div className="meta-value">${formatUSDC(data.fundingGoal)}</div>
+                  <div className="meta-label">Adelanto recibido</div>
+                  <div className="meta-value">${formatMXN(receivedByDealer)} MXN</div>
                 </div>
                 <div className="meta-item">
                   <div className="meta-label">Descuento</div>
-                  <div className="meta-value">{Number(data.discountBps) / 100}%</div>
+                  <div className="meta-value">{(Number(data.discountBps) / 100).toFixed(2)}%</div>
                 </div>
                 <div className="meta-item">
                   <div className="meta-label">Plazo de cobro</div>
@@ -211,7 +286,7 @@ export default function DealerView() {
                 <>
                   <div className="progress"><div className="progress-bar" style={{ width: `${pct}%` }} /></div>
                   <div style={{ fontSize: 12, color: '#888' }}>
-                    Fondeado ${formatUSDC(data.fundedAmount)} de ${formatUSDC(data.fundingGoal)} ({pct}%)
+                    Fondeado ${formatMXN(data.fundedAmount)} de ${formatMXN(data.fundingGoal)} ({pct}%)
                   </div>
                 </>
               )}
@@ -225,7 +300,7 @@ export default function DealerView() {
                 )}
                 {data.status === 3 && (
                   <button onClick={() => approveAndSettle(id, data.faceValue)} disabled={isPending}>
-                    Depositar ${formatUSDC(data.faceValue)} (ya cobré del banco)
+                    Depositar ${formatMXN(data.faceValue)} MXN (ya cobré del banco)
                   </button>
                 )}
               </div>

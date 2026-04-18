@@ -34,14 +34,27 @@ export default function App() {
               <button className="ghost" onClick={() => disconnect()}>Salir</button>
             </div>
           ) : (
-            <button
-              onClick={() => {
-                const c = connectors[0];
-                if (c) connect({ connector: c });
-              }}
-            >
-              Conectar wallet
-            </button>
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', justifyContent: 'flex-end', maxWidth: 600 }}>
+              {connectors.length === 0 && (
+                <span style={{ color: '#888', fontSize: 13 }}>No se detectaron wallets instalados.</span>
+              )}
+              {connectors.map((c) => (
+                <button
+                  key={c.uid}
+                  onClick={() => connect({ connector: c })}
+                  title={`${c.id} — ${c.type}`}
+                >
+                  {c.icon && (
+                    <img
+                      src={c.icon}
+                      alt=""
+                      style={{ width: 16, height: 16, verticalAlign: 'middle', marginRight: 6, borderRadius: 3 }}
+                    />
+                  )}
+                  {c.name}
+                </button>
+              ))}
+            </div>
           )}
         </div>
       </header>

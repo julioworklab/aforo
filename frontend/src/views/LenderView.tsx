@@ -4,7 +4,7 @@ import { CONTRACTS } from '../config';
 import rmAbi from '../receivable-market-abi.json';
 import usdcAbi from '../mock-usdc-abi.json';
 import {
-  formatUSDC, parseUSDC, statusPillClass, statusLabel,
+  formatMXN, parseMXN, statusPillClass, statusLabel,
   formatDeadline, type Receivable,
 } from '../lib';
 
@@ -53,14 +53,25 @@ export default function LenderView() {
     query: { refetchInterval: 5000, enabled: Boolean(address) },
   });
 
+  const { data: myClaims, refetch: refetchClaims } = useReadContracts({
+    contracts: ids.map(id => ({
+      address: CONTRACTS.ReceivableMarket,
+      abi: rmAbi as any,
+      functionName: 'hasClaimed',
+      args: address ? [id, address] : [],
+    })),
+    query: { refetchInterval: 5000, enabled: Boolean(address) },
+  });
+
   useEffect(() => {
     if (txDone) {
       refetchCount();
       refetchAll();
       refetchBalance();
       refetchShares();
+      refetchClaims();
     }
-  }, [txDone, refetchCount, refetchAll, refetchBalance, refetchShares]);
+  }, [txDone, refetchCount, refetchAll, refetchBalance, refetchShares, refetchClaims]);
 
   const listed = (allReceivables ?? []).map((r, i) => ({
     id: ids[i],
@@ -71,14 +82,35 @@ export default function LenderView() {
     id: ids[i],
     data: r.result as unknown as Receivable | undefined,
     share: (myShares?.[i]?.result as bigint | undefined) ?? 0n,
+    claimed: Boolean(myClaims?.[i]?.result),
   })).filter(r => r.data && r.share > 0n);
+
+  // Split positions: active (not yet claimed) vs history (already claimed/realized)
+  const activePositions = myPositions.filter(p => !p.claimed);
+  const realizedPositions = myPositions.filter(p => p.claimed);
+
+  // Realized PnL across all claimed positions
+  const { totalInvested, totalReceived, totalProfit } = realizedPositions.reduce((acc, p) => {
+    if (!p.data) return acc;
+    const principal = p.share;
+    const payout = p.data.status === 4
+      ? (p.share * p.data.settledAmount) / p.data.fundingGoal
+      : p.data.status === 6
+        ? p.share  // cancelled = refund principal, no profit
+        : 0n;      // defaulted = no payout
+    return {
+      totalInvested: acc.totalInvested + principal,
+      totalReceived: acc.totalReceived + payout,
+      totalProfit: acc.totalProfit + (payout - principal),
+    };
+  }, { totalInvested: 0n, totalReceived: 0n, totalProfit: 0n });
 
   const [fundAmounts, setFundAmounts] = useState<Record<string, string>>({});
 
   async function fund(id: bigint, remaining: bigint) {
     const key = String(id);
-    const raw = fundAmounts[key] ?? formatUSDC(remaining);
-    const amount = parseUSDC(raw);
+    const raw = fundAmounts[key] ?? formatMXN(remaining);
+    const amount = parseMXN(raw);
 
     const approveHash = await writeContractAsync({
       address: CONTRACTS.MockUSDC,
@@ -113,7 +145,7 @@ export default function LenderView() {
       address: CONTRACTS.MockUSDC,
       abi: usdcAbi,
       functionName: 'mint',
-      args: [address, parseUSDC('2000000')],
+      args: [address, parseMXN('2000000')],
     });
     setLastTxHash(hash);
   }
@@ -123,19 +155,24 @@ export default function LenderView() {
       <div className="grid-2">
         <div className="stat">
           <div className="stat-label">Tu saldo disponible</div>
-          <div className="stat-value">${formatUSDC(usdcBalance as bigint | undefined)} <span style={{ fontSize: 14, color: '#888' }}>mUSDC</span></div>
+          <div className="stat-value">${formatMXN(usdcBalance as bigint | undefined)} <span style={{ fontSize: 14, color: '#888', fontWeight: 400 }}>MXN</span></div>
           <button className="ghost" onClick={mintTestUSDC} disabled={isPending} style={{ marginTop: 10, fontSize: 12 }}>
-            (Demo) Acuñar 2M mUSDC
+            (Demo) Acuñar 2,000,000 MXN
           </button>
         </div>
         <div className="stat">
           <div className="stat-label">Oportunidades en el mercado</div>
           <div className="stat-value">{listed.length}</div>
-          <div style={{ fontSize: 12, color: '#666', marginTop: 4 }}>ventas por cobrar buscando fondeo</div>
+          <div style={{ fontSize: 12, color: '#666', marginTop: 4 }}>ventas buscando fondeo</div>
         </div>
         <div className="stat">
-          <div className="stat-label">Mis posiciones activas</div>
-          <div className="stat-value">{myPositions.length}</div>
+          <div className="stat-label">Ganancia total ya cobrada</div>
+          <div className="stat-value" style={{ color: totalProfit > 0n ? '#86ffc6' : '#ccc' }}>
+            {totalProfit > 0n ? '+' : ''}${formatMXN(totalProfit)}
+          </div>
+          <div style={{ fontSize: 11, color: '#666', marginTop: 4 }}>
+            {realizedPositions.length} operación(es) cerrada(s) · prestaste ${formatMXN(totalInvested)}, recibiste ${formatMXN(totalReceived)}
+          </div>
         </div>
       </div>
 
@@ -151,7 +188,6 @@ export default function LenderView() {
           const pct = data.fundingGoal > 0n ? Number((data.fundedAmount * 100n) / data.fundingGoal) : 0;
           const key = String(id);
 
-          // Projected yield for funding the remaining amount
           const projectedPayout = (remaining * data.faceValue) / data.fundingGoal;
           const projectedProfit = projectedPayout - remaining;
 
@@ -168,15 +204,15 @@ export default function LenderView() {
               <div className="receivable-meta">
                 <div className="meta-item">
                   <div className="meta-label">Recuperas al vencimiento</div>
-                  <div className="meta-value">${formatUSDC(data.faceValue)}</div>
+                  <div className="meta-value">${formatMXN(data.faceValue)} MXN</div>
                 </div>
                 <div className="meta-item">
                   <div className="meta-label">Prestas hoy (máx)</div>
-                  <div className="meta-value">${formatUSDC(remaining)}</div>
+                  <div className="meta-value">${formatMXN(remaining)} MXN</div>
                 </div>
                 <div className="meta-item">
                   <div className="meta-label">Ganancia si fondeas todo</div>
-                  <div className="meta-value" style={{ color: '#86ffc6' }}>+${formatUSDC(projectedProfit)}</div>
+                  <div className="meta-value" style={{ color: '#86ffc6' }}>+${formatMXN(projectedProfit)} MXN</div>
                 </div>
                 <div className="meta-item">
                   <div className="meta-label">Vence</div>
@@ -186,16 +222,16 @@ export default function LenderView() {
 
               <div className="progress"><div className="progress-bar" style={{ width: `${pct}%` }} /></div>
               <div style={{ fontSize: 12, color: '#888' }}>
-                Fondeado ${formatUSDC(data.fundedAmount)} de ${formatUSDC(data.fundingGoal)} ({pct}%)
+                Fondeado ${formatMXN(data.fundedAmount)} de ${formatMXN(data.fundingGoal)} ({pct}%)
               </div>
 
               <div style={{ display: 'flex', gap: 10, marginTop: 14, alignItems: 'flex-end' }}>
                 <div style={{ flex: 1 }}>
-                  <label>Cuánto prestar</label>
+                  <label>Cuánto prestar (MXN)</label>
                   <input
-                    value={fundAmounts[key] ?? formatUSDC(remaining)}
+                    value={fundAmounts[key] ?? formatMXN(remaining, { showDecimals: false })}
                     onChange={e => setFundAmounts(s => ({ ...s, [key]: e.target.value }))}
-                    placeholder={formatUSDC(remaining)}
+                    placeholder={formatMXN(remaining, { showDecimals: false })}
                   />
                 </div>
                 <button onClick={() => fund(id, remaining)} disabled={isPending}>
@@ -207,54 +243,116 @@ export default function LenderView() {
         })
       )}
 
-      <div className="section-title">Mis posiciones</div>
-      {myPositions.length === 0 ? (
-        <div className="card" style={{ textAlign: 'center', color: '#666' }}>
-          Aún no has prestado a ninguna venta.
-        </div>
-      ) : (
-        myPositions.map(({ id, data, share }) => {
-          if (!data) return null;
-          const canClaim = data.status === 4 || data.status === 6;
-          const projectedPayout = data.status === 4
-            ? (share * data.settledAmount) / data.fundingGoal
-            : share; // refund on cancel
+      {activePositions.length > 0 && (
+        <>
+          <div className="section-title">Mis posiciones activas</div>
+          {activePositions.map(({ id, data, share }) => {
+            if (!data) return null;
+            const canClaim = data.status === 4 || data.status === 6;
+            const projectedPayout = data.status === 4
+              ? (share * data.settledAmount) / data.fundingGoal
+              : share;
+            const projectedProfit = projectedPayout - share;
 
-          return (
-            <div key={String(id)} className="card">
-              <div className="receivable-header">
-                <div>
-                  <div className="receivable-title">Venta #{String(id)}</div>
-                  <div className="receivable-ref mono">prestaste ${formatUSDC(share)}</div>
+            return (
+              <div key={String(id)} className="card">
+                <div className="receivable-header">
+                  <div>
+                    <div className="receivable-title">Venta #{String(id)}</div>
+                    <div className="receivable-ref mono">prestaste ${formatMXN(share)} MXN</div>
+                  </div>
+                  <span className={statusPillClass(data.status)}>{statusLabel(data.status)}</span>
                 </div>
-                <span className={statusPillClass(data.status)}>{statusLabel(data.status)}</span>
-              </div>
 
-              <div className="receivable-meta">
-                <div className="meta-item">
-                  <div className="meta-label">Tu préstamo</div>
-                  <div className="meta-value">${formatUSDC(share)}</div>
-                </div>
-                <div className="meta-item">
-                  <div className="meta-label">Recibirás</div>
-                  <div className="meta-value" style={{ color: canClaim ? '#86ffc6' : '#ccc' }}>
-                    ${formatUSDC(projectedPayout)}
+                <div className="receivable-meta">
+                  <div className="meta-item">
+                    <div className="meta-label">Tu préstamo</div>
+                    <div className="meta-value">${formatMXN(share)} MXN</div>
+                  </div>
+                  <div className="meta-item">
+                    <div className="meta-label">{canClaim ? 'Puedes cobrar' : 'Recibirás al vencer'}</div>
+                    <div className="meta-value" style={{ color: canClaim ? '#86ffc6' : '#ccc' }}>
+                      ${formatMXN(projectedPayout)} MXN
+                    </div>
+                  </div>
+                  <div className="meta-item">
+                    <div className="meta-label">Ganancia</div>
+                    <div className="meta-value" style={{ color: '#86ffc6' }}>
+                      +${formatMXN(projectedProfit)} MXN
+                    </div>
+                  </div>
+                  <div className="meta-item">
+                    <div className="meta-label">Vence</div>
+                    <div className="meta-value">{formatDeadline(data.settlementDeadline)}</div>
                   </div>
                 </div>
-                <div className="meta-item">
-                  <div className="meta-label">Vence</div>
-                  <div className="meta-value">{formatDeadline(data.settlementDeadline)}</div>
+
+                {canClaim && (
+                  <button onClick={() => claim(id)} disabled={isPending}>
+                    Cobrar ${formatMXN(projectedPayout)} MXN
+                  </button>
+                )}
+              </div>
+            );
+          })}
+        </>
+      )}
+
+      {realizedPositions.length > 0 && (
+        <>
+          <div className="section-title">Historial — operaciones cerradas</div>
+          {realizedPositions.map(({ id, data, share }) => {
+            if (!data) return null;
+            const actualPayout = data.status === 4
+              ? (share * data.settledAmount) / data.fundingGoal
+              : data.status === 6 ? share : 0n;
+            const profit = actualPayout - share;
+
+            return (
+              <div key={String(id)} className="card" style={{ opacity: 0.9 }}>
+                <div className="receivable-header">
+                  <div>
+                    <div className="receivable-title">Venta #{String(id)} <span style={{ fontSize: 13, color: '#86ffc6', fontWeight: 400 }}>✓ Cobrada</span></div>
+                    <div className="receivable-ref mono">prestaste ${formatMXN(share)} · recibiste ${formatMXN(actualPayout)}</div>
+                  </div>
+                  <span className={statusPillClass(data.status)}>{statusLabel(data.status)}</span>
+                </div>
+
+                <div className="receivable-meta">
+                  <div className="meta-item">
+                    <div className="meta-label">Prestaste</div>
+                    <div className="meta-value">${formatMXN(share)} MXN</div>
+                  </div>
+                  <div className="meta-item">
+                    <div className="meta-label">Cobraste</div>
+                    <div className="meta-value">${formatMXN(actualPayout)} MXN</div>
+                  </div>
+                  <div className="meta-item">
+                    <div className="meta-label">Ganancia realizada</div>
+                    <div className="meta-value" style={{ color: profit > 0n ? '#86ffc6' : '#aaa' }}>
+                      {profit > 0n ? '+' : ''}${formatMXN(profit)} MXN
+                    </div>
+                  </div>
+                  <div className="meta-item">
+                    <div className="meta-label">Rendimiento</div>
+                    <div className="meta-value" style={{ color: '#b9a6ff' }}>
+                      {share > 0n ? ((Number(profit) / Number(share)) * 100).toFixed(2) : '0'}%
+                    </div>
+                  </div>
                 </div>
               </div>
+            );
+          })}
+        </>
+      )}
 
-              {canClaim && (
-                <button onClick={() => claim(id)} disabled={isPending}>
-                  Cobrar ${formatUSDC(projectedPayout)}
-                </button>
-              )}
-            </div>
-          );
-        })
+      {activePositions.length === 0 && realizedPositions.length === 0 && (
+        <>
+          <div className="section-title">Mis posiciones</div>
+          <div className="card" style={{ textAlign: 'center', color: '#666' }}>
+            Aún no has prestado a ninguna venta.
+          </div>
+        </>
       )}
 
       {txConfirming && <div style={{ marginTop: 10, fontSize: 13, color: '#ffcc5c' }}>Confirmando transacción…</div>}
