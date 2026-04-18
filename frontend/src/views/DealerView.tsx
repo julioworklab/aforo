@@ -253,6 +253,18 @@ export default function DealerView() {
           if (!data) return null;
           const pct = data.fundingGoal > 0n ? Number((data.fundedAmount * 100n) / data.fundingGoal) : 0;
           const receivedByDealer = (data.fundingGoal * 9950n) / 10000n;
+          // Total cost of the operation = what dealer repays minus what they received
+          // = faceValue - receivedByDealer  (already includes discount + protocol fee)
+          const operationCost = data.faceValue - receivedByDealer;
+          const costPct = data.faceValue > 0n
+            ? (Number(operationCost) / Number(data.faceValue)) * 100
+            : 0;
+          // Days remaining to deadline
+          const nowSec = BigInt(Math.floor(Date.now() / 1000));
+          const secsRemaining = data.settlementDeadline > nowSec
+            ? Number(data.settlementDeadline - nowSec)
+            : 0;
+          const daysRemaining = Math.ceil(secsRemaining / 86400);
           return (
             <div key={String(id)} className="card">
               <div className="receivable-header">
@@ -273,12 +285,28 @@ export default function DealerView() {
                   <div className="meta-value">${formatMXN(receivedByDealer)} MXN</div>
                 </div>
                 <div className="meta-item">
+                  <div className="meta-label">Costo por operación</div>
+                  <div className="meta-value" style={{ color: '#ff8a8a' }}>
+                    −${formatMXN(operationCost)} MXN
+                    <span style={{ fontSize: 11, color: '#888', fontWeight: 400, marginLeft: 4 }}>
+                      ({costPct.toFixed(2)}%)
+                    </span>
+                  </div>
+                </div>
+                <div className="meta-item">
                   <div className="meta-label">Descuento</div>
                   <div className="meta-value">{(Number(data.discountBps) / 100).toFixed(2)}%</div>
                 </div>
                 <div className="meta-item">
                   <div className="meta-label">Plazo de cobro</div>
-                  <div className="meta-value">{formatDeadline(data.settlementDeadline)}</div>
+                  <div className="meta-value">
+                    {formatDeadline(data.settlementDeadline)}
+                    {data.status !== 4 && data.status !== 5 && data.status !== 6 && (
+                      <span style={{ fontSize: 11, color: '#888', fontWeight: 400, marginLeft: 4 }}>
+                        ({daysRemaining > 0 ? `${daysRemaining} día${daysRemaining === 1 ? '' : 's'}` : 'vencido'})
+                      </span>
+                    )}
+                  </div>
                 </div>
               </div>
 
