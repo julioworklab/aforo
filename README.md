@@ -32,15 +32,19 @@ Todo lo hace un **programa de computadora** que guarda el dinero hasta que se cu
 
 ---
 
-## ¿Por qué en Monad y no en otra red?
+## ¿Por qué en Monad y no en otra blockchain?
 
-Monad es una red de computadoras donde mover dinero cuesta casi nada. Eso nos permite atender préstamos hasta de **cinco mil pesos** — cosa que los bancos jamás harían, y que en otras redes tampoco sería rentable.
+Monad es un L1 compatible con la EVM pero con **parallel execution**: en vez de ejecutar transacciones una tras otra (como Ethereum, Arbitrum u Optimism), ejecuta en paralelo todas las que no tocan el mismo estado. El resultado: ~10,000 TPS, bloques de **400ms**, finalidad en ~800ms, y gas fees una fracción del L1 de Ethereum — e incluso por debajo de la mayoría de L2s.
 
-Tres razones técnicas, en simple:
+Eso desbloquea tres cosas que son estructurales para que Aforo funcione al escalar:
 
-1. **Cobrar poco por tx** — si mover el dinero cuesta 5 pesos en vez de 50, podemos hacer préstamos chicos y aún así ganar.
-2. **El dinero de los prestamistas no se queda dormido** — entre un préstamo y otro, está generando rendimiento automático en otros lugares de la misma red.
-3. **Muchos préstamos al mismo tiempo sin tráfico** — la red procesa préstamos en paralelo, no en fila. Aguanta al crecer.
+1. **Gas floor bajo habilita tickets chicos.** Originar un factoraje de $5,000 MXN en Ethereum L1 es imposible — el gas fee solo se come el spread. En Monad, el costo por transacción es suficientemente bajo para que receivables sub-$100K sean económicamente viables, abriendo el 70% del mercado PyME que ningún SOFOM ni fintech tradicional puede servir hoy.
+
+2. **Composability con DeFi nativo del L1.** Morpho, Curve, Uniswap y Aave ya están desplegados en Monad mainnet desde day-1. El capital de los lenders no se queda ocioso esperando una receivable — stakeado en un money market genera yield base, y al momento de fondear una operación se redirige atómicamente. El TIR efectivo del lender sube y el costo del capital para el dealer baja.
+
+3. **Parallel EVM = sin contention al escalar.** Al crecer a 20+ lotes con miles de receivables concurrentes, la infra deja de ser producto single-tenant y se vuelve un marketplace de alta concurrencia: múltiples dealers tokenizando, lenders pujando en varias subastas, settlements distribuyéndose y rebalanceos de yield sucediendo al mismo tiempo. En una EVM secuencial todas esas operaciones compiten por block space (contention, MEV, front-running en pujas). En Monad se ejecutan en paralelo porque optimistic concurrency control deja que las txs toquen storage disjunto sin bloquearse mutuamente.
+
+**Lo que NO es:** "necesitamos 10,000 TPS" — nuestro volumen no se acerca todavía. El argumento real es **gas floor + composability + parallel execution = unit economics que no se rompen al escalar**.
 
 ---
 
