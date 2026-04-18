@@ -310,13 +310,26 @@ export default function DealerView() {
           </div>
         </div>
 
-        <div style={{ marginTop: 14, background: '#0c0c12', border: '1px solid #1f1f2e', padding: 14, borderRadius: 10 }}>
-          <div style={{ fontSize: 12, color: '#888', marginBottom: 6 }}>Recibirías hoy (después del 0.5% de plataforma):</div>
-          <div style={{ fontSize: 28, fontWeight: 700, color: '#86ffc6', letterSpacing: -0.5 }}>
-            ${formatMXN((fundingGoal * 9950n) / 10000n)} <span style={{ fontSize: 14, color: '#888', fontWeight: 400 }}>MXN</span>
+        <div style={{ marginTop: 14, background: '#0c0c12', border: '1px solid #1f1f2e', padding: 14, borderRadius: 10, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
+          <div>
+            <div style={{ fontSize: 12, color: '#888', marginBottom: 6 }}>Recibirías hoy (después del 0.5% de plataforma):</div>
+            <div style={{ fontSize: 28, fontWeight: 700, color: '#86ffc6', letterSpacing: -0.5 }}>
+              ${formatMXN((fundingGoal * 9950n) / 10000n)} <span style={{ fontSize: 14, color: '#888', fontWeight: 400 }}>MXN</span>
+            </div>
+            <div style={{ fontSize: 12, color: '#666', marginTop: 4 }}>
+              De ${formatMXN(faceValueBig)} MXN que te va a pagar el banco en {deadlineDays} días.
+            </div>
           </div>
-          <div style={{ fontSize: 12, color: '#666', marginTop: 4 }}>
-            De ${formatMXN(faceValueBig)} MXN que te va a pagar el banco en {deadlineDays} días.
+          <div>
+            <div style={{ fontSize: 12, color: '#888', marginBottom: 6 }}>Costo por operación (descuento + plataforma):</div>
+            <div style={{ fontSize: 28, fontWeight: 700, color: '#ff8a8a', letterSpacing: -0.5 }}>
+              −${formatMXN(faceValueBig - ((fundingGoal * 9950n) / 10000n))} <span style={{ fontSize: 14, color: '#888', fontWeight: 400 }}>MXN</span>
+            </div>
+            <div style={{ fontSize: 12, color: '#666', marginTop: 4 }}>
+              {faceValueBig > 0n
+                ? ((Number(faceValueBig - ((fundingGoal * 9950n) / 10000n)) / Number(faceValueBig)) * 100).toFixed(2)
+                : '0.00'}% del monto total que recuperás en {deadlineDays} días.
+            </div>
           </div>
         </div>
 
