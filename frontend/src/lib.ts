@@ -77,6 +77,14 @@ export type Receivable = {
   settledAmount: bigint;
 };
 
+/** Annualize a period return given the number of days the capital was deployed.
+ *  Returns APY in percent (e.g. 30.5 for 30.5% per year).
+ *  Uses compounding: APY = (1 + r)^(365/T) - 1. */
+export function annualizePct(periodReturn: number, termDays: number): number {
+  if (termDays <= 0 || periodReturn <= 0) return 0;
+  return ((1 + periodReturn) ** (365 / termDays) - 1) * 100;
+}
+
 // ===== Agente Aforo — scoring engine en el navegador ========================
 
 export type Institution =

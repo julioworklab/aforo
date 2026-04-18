@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react';
-import { useAccount, useReadContract, useWriteContract, useWaitForTransactionReceipt, useReadContracts } from 'wagmi';
+import { useAccount, useReadContract, useWriteContract, useWaitForTransactionReceipt, useReadContracts, usePublicClient } from 'wagmi';
 import { CONTRACTS } from '../config';
 import rmAbi from '../receivable-market-abi.json';
 import usdcAbi from '../mock-usdc-abi.json';
 import {
   formatMXN, parseMXN, statusPillClass, statusLabel,
-  formatDeadline, type Receivable,
+  formatDeadline, annualizePct, type Receivable,
 } from '../lib';
 
 export default function LenderView() {
@@ -62,6 +62,53 @@ export default function LenderView() {
     })),
     query: { refetchInterval: 5000, enabled: Boolean(address) },
   });
+
+  // Pull creation timestamps from event logs so we can compute accurate term/APY.
+  const publicClient = usePublicClient();
+  const [creationTs, setCreationTs] = useState<Record<string, bigint>>({});
+  useEffect(() => {
+    if (!publicClient || total === 0) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const currentBlock = await publicClient.getBlockNumber();
+        const fromBlock = currentBlock > 250000n ? currentBlock - 250000n : 0n;
+        const logs = await publicClient.getContractEvents({
+          address: CONTRACTS.ReceivableMarket,
+          abi: rmAbi as any,
+          eventName: 'ReceivableListed',
+          fromBlock,
+          toBlock: currentBlock,
+        });
+        const blockNumbers = Array.from(new Set(logs.map(l => l.blockNumber).filter(Boolean) as bigint[]));
+        const tsByBlock: Record<string, bigint> = {};
+        await Promise.all(blockNumbers.map(async bn => {
+          const block = await publicClient.getBlock({ blockNumber: bn });
+          tsByBlock[String(bn)] = block.timestamp;
+        }));
+        const result: Record<string, bigint> = {};
+        for (const log of logs as any[]) {
+          const rid = log.args?.id?.toString();
+          if (rid && log.blockNumber) result[rid] = tsByBlock[String(log.blockNumber)] ?? 0n;
+        }
+        if (!cancelled) setCreationTs(result);
+      } catch (e) {
+        console.warn('No se pudieron cargar timestamps de creación:', e);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [publicClient, total]);
+
+  function termDaysFor(id: bigint, deadline: bigint): number {
+    const created = creationTs[String(id)];
+    if (created && deadline > created) {
+      return Number(deadline - created) / 86400;
+    }
+    // Fallback: remaining days to deadline (conservative)
+    const nowSec = BigInt(Math.floor(Date.now() / 1000));
+    if (deadline > nowSec) return Number(deadline - nowSec) / 86400;
+    return 28;
+  }
 
   useEffect(() => {
     if (txDone) {
@@ -307,9 +354,12 @@ export default function LenderView() {
               ? (share * data.settledAmount) / data.fundingGoal
               : data.status === 6 ? share : 0n;
             const profit = actualPayout - share;
+            const effectiveReturn = share > 0n ? Number(profit) / Number(share) : 0;
+            const term = termDaysFor(id, data.settlementDeadline);
+            const apy = annualizePct(effectiveReturn, term);
 
             return (
-              <div key={String(id)} className="card" style={{ opacity: 0.9 }}>
+              <div key={String(id)} className="card" style={{ opacity: 0.95 }}>
                 <div className="receivable-header">
                   <div>
                     <div className="receivable-title">Venta #{String(id)} <span style={{ fontSize: 13, color: '#86ffc6', fontWeight: 400 }}>✓ Cobrada</span></div>
@@ -334,9 +384,18 @@ export default function LenderView() {
                     </div>
                   </div>
                   <div className="meta-item">
-                    <div className="meta-label">Rendimiento</div>
+                    <div className="meta-label">Rendimiento efectivo</div>
                     <div className="meta-value" style={{ color: '#b9a6ff' }}>
-                      {share > 0n ? ((Number(profit) / Number(share)) * 100).toFixed(2) : '0'}%
+                      {(effectiveReturn * 100).toFixed(2)}%
+                      <span style={{ fontSize: 11, color: '#888', fontWeight: 400, marginLeft: 4 }}>
+                        ({term.toFixed(0)} días)
+                      </span>
+                    </div>
+                  </div>
+                  <div className="meta-item">
+                    <div className="meta-label">APY anualizado</div>
+                    <div className="meta-value" style={{ color: '#86ffc6' }}>
+                      {apy.toFixed(1)}%
                     </div>
                   </div>
                 </div>
