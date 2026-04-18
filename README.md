@@ -1,6 +1,25 @@
 # Aforo
 
-**Le adelantamos la lana.** A los pequeños negocios que vendieron y están esperando cobrar.
+**Le adelantamos su capital.** A los pequeños negocios que vendieron y están esperando cobrar.
+
+---
+
+## ¿Qué es Aforo?
+
+Aforo es una **plataforma de adelanto de capital para PyMEs mexicanas**, construida sobre Monad. Un negocio que vendió a plazos o con financiamiento del banco puede registrar ese derecho a cobrar, y recibir el dinero al instante de un pool de ahorradores — en vez de esperar semanas a que el banco libere el pago.
+
+- **Para el negocio:** cobra hoy lo que iba a cobrar en 3–4 semanas.
+- **Para el ahorrador:** gana un rendimiento anualizado competitivo prestando contra cuentas por cobrar reales, no contra cripto volátil.
+- **Para el ecosistema:** un **wedge en factoraje de tickets chicos** ($5,000–$1,500,000 MXN) que los bancos y SOFOMES no atienden rentablemente, ampliando el crédito a PyMEs en México.
+
+Piloteamos con un lote de autos seminuevos en Monterrey. El producto es agnóstico de vertical: aplica a motos, maquinaria, equipo médico, servicios B2B — cualquier negocio con cuentas por cobrar en plazos.
+
+### Stack
+
+- **Smart contracts en Solidity** (Foundry), desplegados y verificados en Monad Testnet
+- **Agente de scoring** que lee el pipeline real de ventas del dealer (Monday.com / DMS / ERP) y pricea el riesgo
+- **Frontend** React + wagmi + viem, con vistas separadas para Dealer y Lender
+- **Peso mexicano tokenizado** (mock en testnet, integrable con stablecoin MXN regulado en producción)
 
 ---
 
