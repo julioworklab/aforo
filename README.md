@@ -22,11 +22,11 @@ Y no es solo un lote de autos. Es **cualquier negocio que vende a plazos o con f
 
 **Aforo le da su dinero al negocio hoy mismo.**
 
-Un grupo de personas con ahorros le presta al negocio el dinero que está esperando. El negocio les paga un pedacito (un 3% por ejemplo) por el favor. Cuando el banco finalmente suelta la lana en tres semanas, esas personas recuperan su dinero con una ganancia.
+Un grupo de ahorradores le presta al negocio el dinero que está esperando. El negocio les paga un porcentaje acordado. Cuando el banco finalmente suelta el capital del negocio en tres semanas, esas personas recuperan su dinero con una ganancia.
 
 - **El negocio:** cobra hoy en vez de esperar un mes.
 - **Los que prestaron:** ganan más que dejar su dinero en el banco.
-- **Nosotros:** cobramos un pedacito por hacer que todo cuadre.
+- **Nosotros:** cobramos un porcentaje por hacer que todo cuadre.
 
 Todo lo hace un **programa de computadora** que guarda el dinero hasta que se cumplen las reglas que todos aceptaron. Nadie se puede quedar con el dinero que no le toca, porque está a la vista de todos.
 

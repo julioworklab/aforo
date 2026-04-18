@@ -41,19 +41,15 @@ No porque no lo merezcan — sino porque a los bancos no les conviene hacer pré
 
 ## Slide 3 — La solución (~60 seg)
 
-# Nosotros le damos su dinero hoy
+# Aforo le da su dinero al negocio hoy mismo
 
-### Cómo funciona, en 4 pasos:
+Un grupo de ahorradores le presta al negocio el dinero que está esperando. El negocio les paga un porcentaje acordado. Cuando el banco finalmente suelta el capital del negocio en tres semanas, esas personas recuperan su dinero con una ganancia.
 
-1. **El negocio** registra su venta ya cerrada (el derecho a cobrar lo que le van a pagar).
-2. **Un grupo de prestamistas** compra ese derecho a cobrar, con un pequeño descuento (ej. 3%).
-3. **El negocio recibe su dinero al instante** — menos el descuento.
-4. **Cuando el banco paga** en tres semanas, los prestamistas recuperan su dinero con ganancia.
+- **El negocio:** cobra hoy en vez de esperar un mes.
+- **Los que prestaron:** ganan más que dejar su dinero en el banco.
+- **Nosotros:** cobramos un porcentaje por hacer que todo cuadre.
 
-### Todo lo hace un programa de computadora (en Monad) que:
-- Guarda el dinero hasta que se cumplen las reglas pactadas.
-- No deja que nadie se quede con lana que no le toca.
-- Está a la vista de todos — auditable, transparente.
+Todo lo hace un **programa de computadora** que guarda el dinero hasta que se cumplen las reglas que todos aceptaron. Nadie se puede quedar con el dinero que no le toca, porque está a la vista de todos.
 
 ---
 
