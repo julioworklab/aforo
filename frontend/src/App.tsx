@@ -122,58 +122,100 @@ function WalletPicker({
 
   const currentHost = typeof window !== 'undefined' ? window.location.host : '';
   const currentPath = typeof window !== 'undefined' ? window.location.pathname : '/';
-  const currentOrigin = typeof window !== 'undefined' ? window.location.origin : '';
   const currentFullUrl = typeof window !== 'undefined' ? window.location.href : '';
 
-  const deepLinks = [
+  // Only MetaMask has a reliable "open this URL in my in-app browser" deep link.
+  // Phantom and Zerion don't officially support browsing arbitrary dApps via URL —
+  // their mobile UX is WalletConnect-first. For those we fall back to "copy URL"
+  // so the user can paste it inside their wallet's built-in browser.
+  type WalletEntry = {
+    name: string;
+    icon: string;
+    kind: 'deep-link' | 'copy-url';
+    href?: string;
+    instruction?: string;
+  };
+  const deepLinks: WalletEntry[] = [
     {
       name: 'MetaMask',
+      kind: 'deep-link',
       href: `https://metamask.app.link/dapp/${currentHost}${currentPath}`,
       icon: '/wallets/metamask.png',
     },
     {
       name: 'Phantom',
-      href: `https://phantom.app/ul/browse/${encodeURIComponent(currentFullUrl)}?ref=${encodeURIComponent(currentOrigin)}`,
+      kind: 'copy-url',
+      instruction: 'Abre Phantom → tab Browse (🧭) → pega el link',
       icon: '/wallets/phantom.png',
     },
     {
-      name: 'Rainbow',
-      href: `https://rnbwapp.com/browse?url=${encodeURIComponent(currentFullUrl)}`,
-      icon: '/wallets/rainbow.png',
+      name: 'Zerion',
+      kind: 'copy-url',
+      instruction: 'Abre Zerion → tab DApps → Browser → pega el link',
+      icon: '/wallets/zerion.png',
     },
   ];
+
+  async function copyAndShow(w: WalletEntry) {
+    try {
+      await navigator.clipboard.writeText(currentFullUrl);
+      alert(`Link copiado.\n\n${w.instruction}`);
+    } catch {
+      alert(`Copia este link manualmente y pégalo en ${w.name}:\n\n${currentFullUrl}`);
+    }
+  }
+
+  const buttonStyle = {
+    background: 'linear-gradient(135deg, #836EF9, #A0055D)',
+    color: 'white',
+    padding: '10px 14px',
+    borderRadius: 8,
+    fontWeight: 600,
+    fontSize: 14,
+    textDecoration: 'none',
+    display: 'inline-flex' as const,
+    alignItems: 'center' as const,
+    gap: 8,
+    border: 'none',
+    cursor: 'pointer',
+  };
+
+  function WalletBtn({ w }: { w: WalletEntry }) {
+    const content = (
+      <>
+        <img src={w.icon} alt="" style={{ width: 18, height: 18, borderRadius: 4 }} />
+        {w.name}
+      </>
+    );
+    if (w.kind === 'deep-link' && w.href) {
+      return (
+        <a
+          key={w.name}
+          href={w.href}
+          target="_blank"
+          rel="noopener noreferrer"
+          style={buttonStyle}
+        >
+          {content}
+        </a>
+      );
+    }
+    return (
+      <button
+        key={w.name}
+        onClick={() => copyAndShow(w)}
+        style={buttonStyle}
+      >
+        {content}
+      </button>
+    );
+  }
 
   // On mobile, if no injected provider, show deep-link row.
   if (isMobile && filtered.length === 0) {
     return (
       <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', justifyContent: 'flex-end', maxWidth: 600 }}>
-        {deepLinks.map((w) => (
-          <a
-            key={w.name}
-            href={w.href}
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{
-              background: 'linear-gradient(135deg, #836EF9, #A0055D)',
-              color: 'white',
-              padding: '10px 14px',
-              borderRadius: 8,
-              fontWeight: 600,
-              fontSize: 14,
-              textDecoration: 'none',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 8,
-            }}
-          >
-            <img
-              src={w.icon}
-              alt=""
-              style={{ width: 18, height: 18, borderRadius: 4, verticalAlign: 'middle' }}
-            />
-            {w.name}
-          </a>
-        ))}
+        {deepLinks.map((w) => <WalletBtn key={w.name} w={w} />)}
       </div>
     );
   }
@@ -198,29 +240,7 @@ function WalletPicker({
           {c.name}
         </button>
       ))}
-      {filtered.length === 0 && deepLinks.map((w) => (
-        <a
-          key={w.name}
-          href={w.href}
-          target="_blank"
-          rel="noopener noreferrer"
-          style={{
-            background: 'linear-gradient(135deg, #836EF9, #A0055D)',
-            color: 'white',
-            padding: '10px 14px',
-            borderRadius: 8,
-            fontWeight: 600,
-            fontSize: 14,
-            textDecoration: 'none',
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: 8,
-          }}
-        >
-          <img src={w.icon} alt="" style={{ width: 18, height: 18, borderRadius: 4 }} />
-          {w.name}
-        </a>
-      ))}
+      {filtered.length === 0 && deepLinks.map((w) => <WalletBtn key={w.name} w={w} />)}
     </div>
   );
 }
