@@ -35,10 +35,28 @@ export default function App() {
             </div>
           ) : (
             <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', justifyContent: 'flex-end', maxWidth: 600 }}>
-              {connectors.length === 0 && (
-                <span style={{ color: '#888', fontSize: 13 }}>No se detectaron wallets instalados.</span>
-              )}
-              {connectors.map((c) => (
+              {connectors.length === 0 ? (
+                <a
+                  href={`https://metamask.app.link/dapp/${window.location.host}${window.location.pathname}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{
+                    background: 'linear-gradient(135deg, #836EF9, #A0055D)',
+                    color: 'white',
+                    padding: '10px 18px',
+                    borderRadius: 8,
+                    fontWeight: 600,
+                    fontSize: 14,
+                    textDecoration: 'none',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 8,
+                  }}
+                  title="Abrir este sitio dentro del browser integrado de MetaMask Mobile"
+                >
+                  📱 Abrir en MetaMask Mobile
+                </a>
+              ) : connectors.map((c) => (
                 <button
                   key={c.uid}
                   onClick={() => connect({ connector: c })}
