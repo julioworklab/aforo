@@ -10,7 +10,7 @@ Aforo es una **plataforma de adelanto de capital para PyMEs mexicanas**, constru
 
 - **Para el negocio:** cobra hoy lo que iba a cobrar en 3–4 semanas.
 - **Para el ahorrador:** gana un rendimiento anualizado competitivo prestando contra cuentas por cobrar reales, no contra cripto volátil.
-- **Para el ecosistema:** un **wedge en factoraje de tickets chicos** ($5,000–$1,500,000 MXN) que los bancos y SOFOMES no atienden rentablemente, ampliando el crédito a PyMEs en México.
+- **Para el ecosistema:** un **punto de entrada al factoraje de tickets chicos** ($5,000–$1,500,000 MXN) que los bancos y SOFOMES no atienden rentablemente, ampliando el crédito a PyMEs en México.
 
 Piloteamos con un lote de autos seminuevos en Monterrey. El producto es agnóstico de vertical: aplica a motos, maquinaria, equipo médico, servicios B2B — cualquier negocio con cuentas por cobrar en plazos.
 

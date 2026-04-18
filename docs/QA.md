@@ -168,7 +168,7 @@ Sí, y preparados. Julio tiene background de banca patrimonial (ex-Santander), c
 
 | Fase | Timeline | Qué se construye | KPI |
 |------|----------|------------------|-----|
-| 1 Wedge | Hoy → 3 meses | Mainnet · 1 lote (Trébol) · Pool $500K | 10 receivables settled, 0 defaults |
+| 1 Punto de entrada | Hoy → 3 meses | Mainnet · 1 lote (Trébol) · Pool $500K | 10 receivables settled, 0 defaults |
 | 2 Densidad autos MTY | 3–9 meses | 10–20 lotes en NL | $2M MXN/mes originado |
 | 3 Expansión vertical | 9–18 meses | Motos · maquinaria · equipo médico | $10M MXN/mes · 3 verticales |
 | 4 Multi-país | 18–36 meses | Argentina · Colombia · capital institucional | $100M+ MXN/mes |

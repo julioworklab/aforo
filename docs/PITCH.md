@@ -100,7 +100,7 @@ Conectamos con su sistema real (Monday.com). Encontramos 2 ventas vivas esperand
 | 3 | Motos, maquinaria, equipo médico | 9–18 meses |
 | 4 | Multi-país LATAM + capital institucional | 18–36 meses |
 
-**Hoy:** lotes de autos (nuestro wedge).
+**Hoy:** lotes de autos (nuestro punto de entrada).
 **Mañana:** cualquier PyME mexicana que vende a plazos.
 
 ---
