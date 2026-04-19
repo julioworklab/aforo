@@ -210,18 +210,31 @@ export type ScoringInputs = {
 };
 
 // Keyword signals the agent scans in the dealer's free-text observations.
+// Spanish lowercase, matches substring so 'deuda' catches 'adeudado', etc.
 const POSITIVE_KEYWORDS = [
-  'referido', 'recomendado', 'recurrente', 'frecuente', 'ya compró', 'conozco',
-  'familiar', 'pariente', 'confianza', 'aval', 'garantía', 'buen pagador',
-  'historial', 'referencia', 'limpio', 'al corriente',
+  'referido', 'recomendado', 'recurrente', 'frecuente', 'ya compr', 'conozco',
+  'familiar', 'pariente', 'confianza', 'confiable', 'aval', 'garant',
+  'buen pagador', 'buena pagadora', 'historial', 'referencia', 'limpio',
+  'al corriente', 'solvente', 'solvencia', 'estable', 'liquidez',
+  'puntual', 'responsable', 'me consta', 'antigüedad',
 ];
+
 const NEGATIVE_KEYWORDS = [
-  'primer cliente', 'desconocido', 'sin referencia', 'nuevo', 'urgente',
-  'presionado', 'prisa', 'negocia mucho', 'regatea', 'buró', 'atraso',
+  'primer cliente', 'primera vez', 'desconocido', 'sin referencia', 'nuevo',
+  'urgente', 'urgencia', 'presionado', 'prisa', 'negocia mucho', 'regatea',
+  'buró', 'buro de crédito', 'atraso', 'atrasado', 'tarde', 'inestable',
+  'dudoso', 'inseguro', 'riesgoso', 'débil', 'frágil', 'delicado',
 ];
+
 const RED_FLAGS = [
-  'mal pagador', 'no confío', 'fraude', 'engaño', 'sospecho',
-  'mora', 'vencido', 'no paga', 'problema de pagos', 'no responde',
+  'mal pagador', 'no confío', 'no confio', 'fraude', 'engaño', 'engaño',
+  'sospecho', 'sospechoso',
+  'mora', 'moroso', 'vencido', 'no paga', 'no paga a tiempo',
+  'problema de pagos', 'no responde',
+  'deuda', 'endeudad', 'sobreendeudad', 'adeudad', 'endeudamiento',
+  'quiebra', 'quebrar', 'embargo', 'embargad', 'demand',
+  'incumpl', 'default', 'impago', 'insolvente', 'insolvencia',
+  'bancarrota', 'rebotado', 'cheque sin fondos',
 ];
 
 export function analyzeObservations(text: string): { delta: number; flags: string[] } {
