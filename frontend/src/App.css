@@ -35,14 +35,16 @@
 }
 
 .brand-name {
-  font-size: 28px;
+  font-size: 40px;
   font-weight: 700;
   color: white;
-  letter-spacing: -0.5px;
+  letter-spacing: -1px;
+  line-height: 1;
+  margin-bottom: 4px;
 }
 
 .brand-tag {
-  font-size: 13px;
+  font-size: 14px;
   color: #888;
 }
 
