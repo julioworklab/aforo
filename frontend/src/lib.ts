@@ -206,7 +206,50 @@ export type ScoringInputs = {
   staking: StakingLevel;
   reputation: ReputationLevel;
   documents: DocumentsUploaded;
+  observations?: string;
 };
+
+// Keyword signals the agent scans in the dealer's free-text observations.
+const POSITIVE_KEYWORDS = [
+  'referido', 'recomendado', 'recurrente', 'frecuente', 'ya compró', 'conozco',
+  'familiar', 'pariente', 'confianza', 'aval', 'garantía', 'buen pagador',
+  'historial', 'referencia', 'limpio', 'al corriente',
+];
+const NEGATIVE_KEYWORDS = [
+  'primer cliente', 'desconocido', 'sin referencia', 'nuevo', 'urgente',
+  'presionado', 'prisa', 'negocia mucho', 'regatea', 'buró', 'atraso',
+];
+const RED_FLAGS = [
+  'mal pagador', 'no confío', 'fraude', 'engaño', 'sospecho',
+  'mora', 'vencido', 'no paga', 'problema de pagos', 'no responde',
+];
+
+export function analyzeObservations(text: string): { delta: number; flags: string[] } {
+  if (!text || text.trim().length === 0) return { delta: 0, flags: [] };
+  const t = text.toLowerCase();
+  const flags: string[] = [];
+  let delta = 0;
+
+  const pos = POSITIVE_KEYWORDS.filter(k => t.includes(k));
+  if (pos.length > 0) {
+    delta -= Math.min(40, pos.length * 15);
+    flags.push(`Observaciones positivas (${pos.slice(0, 2).join(', ')}): señal de buen perfil.`);
+  }
+
+  const neg = NEGATIVE_KEYWORDS.filter(k => t.includes(k));
+  if (neg.length > 0) {
+    delta += Math.min(80, neg.length * 25);
+    flags.push(`⚠️ Observaciones con riesgo (${neg.slice(0, 2).join(', ')}): ajuste al alza.`);
+  }
+
+  const red = RED_FLAGS.filter(k => t.includes(k));
+  if (red.length > 0) {
+    delta += Math.min(250, red.length * 120);
+    flags.push(`🚩 RED FLAG detectado (${red.slice(0, 2).join(', ')}): riesgo alto, revisar antes de listar.`);
+  }
+
+  return { delta, flags };
+}
 
 export type ScoringOutput = {
   discountBps: number;
@@ -217,7 +260,7 @@ export type ScoringOutput = {
 };
 
 export function scoreDiscount({
-  amount, termDays, institution, knownClient, staking, reputation, documents,
+  amount, termDays, institution, knownClient, staking, reputation, documents, observations,
 }: ScoringInputs): ScoringOutput {
   let bps = 250; // base 2.50% with room for penalties
   const reasons: string[] = [];
@@ -263,6 +306,13 @@ export function scoreDiscount({
   } else {
     bps += 150;
     reasons.push(`⚠️ Sin documentos: los lenders no pueden verificar que la venta existe. +150 bps.`);
+  }
+
+  // Text analysis of the dealer's free-form observations.
+  if (observations && observations.trim()) {
+    const { delta, flags } = analyzeObservations(observations);
+    bps += delta;
+    reasons.push(...flags);
   }
 
   bps = Math.max(100, Math.min(1500, bps));

@@ -32,15 +32,16 @@ export default function DealerView() {
     contrato: false,
     cartaBanco: false,
   });
+  const [observations, setObservations] = useState('');
 
   // Agent scoring — re-runs as form changes
   const scoring = useMemo(() => {
     const amount = parseFloat(faceMXN.replace(/[,\s$]/g, '')) || 0;
     const termDays = parseInt(deadlineDays) || 28;
     return scoreDiscount({
-      amount, termDays, institution, knownClient, staking, reputation, documents,
+      amount, termDays, institution, knownClient, staking, reputation, documents, observations,
     });
-  }, [faceMXN, deadlineDays, institution, knownClient, staking, reputation, documents]);
+  }, [faceMXN, deadlineDays, institution, knownClient, staking, reputation, documents, observations]);
 
   // Keep the discount field in sync with the agent unless user manually overrode it.
   useEffect(() => {
@@ -406,6 +407,23 @@ export default function DealerView() {
                 );
               })}
             </div>
+          </div>
+
+          <div style={{ marginTop: 14 }}>
+            <label style={{ marginBottom: 6 }}>
+              Observaciones del negocio <span style={{ textTransform: 'none', color: '#666', fontWeight: 400, letterSpacing: 0, marginLeft: 6 }}>(opcional · el agente las analiza)</span>
+            </label>
+            <textarea
+              value={observations}
+              onChange={e => setObservations(e.target.value)}
+              placeholder="Ej: 'Cliente recomendado por otro lote, ya me compró un carro el año pasado, tiene buen historial.' · o riesgo: 'Es la primera vez que le vendo, negocia mucho, parece estar presionado.'"
+              rows={3}
+              style={{
+                background: '#13131a', border: '1px solid #2a2a3a', color: '#e8e8e8',
+                padding: '10px 12px', borderRadius: 8, fontSize: 13, width: '100%',
+                fontFamily: 'inherit', resize: 'vertical', minHeight: 70,
+              }}
+            />
           </div>
         </div>
 
