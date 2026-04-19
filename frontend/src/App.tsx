@@ -53,7 +53,7 @@ export default function App() {
           className={`tab ${tab === 'dealer' ? 'active' : ''}`}
           onClick={() => setTab('dealer')}
         >
-          🏪 Soy negocio (necesito mi lana hoy)
+          🏪 Soy negocio (necesito adelantar capital)
         </button>
         <button
           className={`tab ${tab === 'lender' ? 'active' : ''}`}
