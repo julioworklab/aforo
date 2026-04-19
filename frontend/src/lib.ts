@@ -237,25 +237,32 @@ const RED_FLAGS = [
   'bancarrota', 'rebotado', 'cheque sin fondos',
 ];
 
+/** Lowercase + strip diacritics so matching works regardless of accents. */
+function normalizeText(s: string): string {
+  return s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+}
+
 export function analyzeObservations(text: string): { delta: number; flags: string[] } {
   if (!text || text.trim().length === 0) return { delta: 0, flags: [] };
-  const t = text.toLowerCase();
+  const t = normalizeText(text);
   const flags: string[] = [];
   let delta = 0;
 
-  const pos = POSITIVE_KEYWORDS.filter(k => t.includes(k));
+  const match = (list: string[]) => list.filter(k => t.includes(normalizeText(k)));
+
+  const pos = match(POSITIVE_KEYWORDS);
   if (pos.length > 0) {
     delta -= Math.min(40, pos.length * 15);
     flags.push(`Observaciones positivas (${pos.slice(0, 2).join(', ')}): señal de buen perfil.`);
   }
 
-  const neg = NEGATIVE_KEYWORDS.filter(k => t.includes(k));
+  const neg = match(NEGATIVE_KEYWORDS);
   if (neg.length > 0) {
     delta += Math.min(80, neg.length * 25);
     flags.push(`⚠️ Observaciones con riesgo (${neg.slice(0, 2).join(', ')}): ajuste al alza.`);
   }
 
-  const red = RED_FLAGS.filter(k => t.includes(k));
+  const red = match(RED_FLAGS);
   if (red.length > 0) {
     delta += Math.min(250, red.length * 120);
     flags.push(`🚩 RED FLAG detectado (${red.slice(0, 2).join(', ')}): riesgo alto, revisar antes de listar.`);
