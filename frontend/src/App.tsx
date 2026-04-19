@@ -21,7 +21,7 @@ export default function App() {
     <div className="app">
       <header className="header">
         <div className="brand">
-          <img src="/logo.png" alt="Aforo" style={{ width: 42, height: 42, borderRadius: 10 }} />
+          <img src="/logo.png" alt="Aforo" style={{ width: 64, height: 64, borderRadius: 14 }} />
           <div>
             <div className="brand-name">Aforo</div>
             <div className="brand-tag">Le adelantamos la lana a tu negocio.</div>
